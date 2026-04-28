@@ -26,71 +26,84 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-100 to-blue-100 flex items-center justify-center px-4 py-8">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md p-8">
-        <div className="text-center mb-8">
-          <h1 className="text-4xl mb-2">🍺🍷</h1>
-          <h2 className="text-3xl font-bold text-gray-800">Bienvenido</h2>
-          <p className="text-gray-600 mt-2">Inicia sesión en VinaShop</p>
-        </div>
+    <div className="page-shell flex items-center justify-center px-4">
+      <div className="grid w-full max-w-5xl gap-8 lg:grid-cols-[1fr_0.88fr]">
+        <section className="relative hidden overflow-hidden rounded-[2.2rem] border border-[rgba(121,88,66,0.18)] bg-[linear-gradient(145deg,rgba(31,21,17,0.97),rgba(89,63,47,0.92)_60%,rgba(188,149,106,0.7))] p-10 text-[#fff4e6] shadow-[0_30px_70px_rgba(45,30,22,0.26)] lg:block">
+          <div className="absolute -left-8 top-10 h-44 w-44 rounded-full bg-[rgba(255,240,222,0.08)] blur-3xl" />
+          <div className="absolute bottom-0 right-0 h-56 w-56 rounded-full bg-[rgba(255,216,176,0.12)] blur-3xl" />
+          <span className="eyebrow border-[rgba(255,239,220,0.18)] bg-[rgba(255,248,240,0.08)] text-[#f2d4b2]">
+            Members Access
+          </span>
+          <h1 className="mt-6 font-display text-6xl leading-[0.92]">Accede a una experiencia más refinada.</h1>
+          <p className="mt-6 max-w-md text-lg text-[#f1decd]/90">
+            Tu cuenta reúne pedidos, perfil y gestión personal dentro de un entorno cálido, sobrio y profesional.
+          </p>
+        </section>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 transition"
-              placeholder="tu@email.com"
-            />
+        <section className="panel rounded-[2.2rem] p-8 sm:p-10">
+          <div className="mb-8 text-center">
+            <span className="eyebrow">Iniciar sesión</span>
+            <h2 className="mt-5 font-display text-5xl text-[#2d201a]">Bienvenido de nuevo</h2>
+            <p className="mt-3 text-[#6d5040]">Accede a tu perfil y continúa tu selección.</p>
           </div>
 
-          <div>
-            <label className="block text-gray-700 font-semibold mb-2">Contraseña</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 transition"
-              placeholder="••••••"
-            />
-          </div>
+          {error && (
+            <div className="mb-6 rounded-[1.3rem] border border-[#d6a9a9] bg-[#fff2f2] px-4 py-3 text-[#7b3f3f]">
+              {error}
+            </div>
+          )}
 
-          <button
-            type="submit"
-            disabled={cargando}
-            className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {cargando ? 'Cargando...' : 'Iniciar Sesión'}
-          </button>
-        </form>
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div>
+              <label className="mb-2 block text-sm font-bold uppercase tracking-[0.18em] text-[#7a5945]">
+                Email
+              </label>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full rounded-[1.2rem] border border-[rgba(121,88,66,0.18)] bg-[rgba(255,252,247,0.9)] px-4 py-3.5 text-[#2d201a] outline-none transition focus:border-[#a77953] focus:bg-white"
+                placeholder="tu@email.com"
+              />
+            </div>
 
-        <div className="mt-6 text-center">
-          <p className="text-gray-600">
+            <div>
+              <label className="mb-2 block text-sm font-bold uppercase tracking-[0.18em] text-[#7a5945]">
+                Contraseña
+              </label>
+              <input
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full rounded-[1.2rem] border border-[rgba(121,88,66,0.18)] bg-[rgba(255,252,247,0.9)] px-4 py-3.5 text-[#2d201a] outline-none transition focus:border-[#a77953] focus:bg-white"
+                placeholder="••••••••"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={cargando}
+              className="wood-button w-full rounded-[1.2rem] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.16em] transition disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {cargando ? 'Accediendo...' : 'Entrar'}
+            </button>
+          </form>
+
+          <div className="mt-8 text-center text-sm text-[#6d5040]">
             ¿No tienes cuenta?{' '}
-            <Link to="/registro" className="text-purple-600 font-semibold hover:underline">
+            <Link to="/registro" className="font-bold text-[#8c684d] hover:text-[#5e4434]">
               Regístrate aquí
             </Link>
-          </p>
-        </div>
+          </div>
 
-        <div className="mt-4">
-          <Link
-            to="/"
-            className="text-center block text-gray-600 hover:text-gray-800 transition"
-          >
-            ← Volver al inicio
-          </Link>
-        </div>
+          <div className="mt-4 text-center">
+            <Link to="/" className="text-sm font-semibold text-[#6d5040] transition hover:text-[#2d201a]">
+              Volver al inicio
+            </Link>
+          </div>
+        </section>
       </div>
     </div>
   );

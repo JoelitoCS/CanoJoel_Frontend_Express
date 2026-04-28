@@ -3,27 +3,19 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { cervezasAPI, vinosAPI, pedidosAPI } from '../services/api';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-
 export default function Admin() {
   const { usuario, autenticado, esAdmin } = useAuth();
   const navigate = useNavigate();
-  const [seccion, setSeccion] = useState('cervezas'); // 'cervezas', 'vinos', 'pedidos'
+  const [seccion, setSeccion] = useState('cervezas');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
-
-  // Estados para cervezas
   const [cervezas, setCervezas] = useState([]);
   const [formCerveza, setFormCerveza] = useState({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
   const [editandoCerveza, setEditandoCerveza] = useState(null);
-
-  // Estados para vinos
   const [vinos, setVinos] = useState([]);
   const [formVino, setFormVino] = useState({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
   const [editandoVino, setEditandoVino] = useState(null);
-
-  // Estados para pedidos
   const [pedidos, setPedidos] = useState([]);
 
   useEffect(() => {
@@ -41,13 +33,13 @@ export default function Admin() {
     try {
       if (seccion === 'cervezas') {
         const data = await cervezasAPI.obtener();
-        setCervezas(data?.dades || []);  // ✅
+        setCervezas(data?.dades || []);
       } else if (seccion === 'vinos') {
         const data = await vinosAPI.obtener();
-        setVinos(data?.dades || []);     // ✅
+        setVinos(data?.dades || []);
       } else if (seccion === 'pedidos') {
         const data = await pedidosAPI.obtener();
-        setPedidos(data?.dades || []);   // ✅
+        setPedidos(data?.dades || []);
       }
     } catch (err) {
       setError(err.message || 'Error al cargar datos');
@@ -56,7 +48,6 @@ export default function Admin() {
     }
   };
 
-  // ===== CERVEZAS =====
   const guardarCerveza = async (e) => {
     e.preventDefault();
     if (!formCerveza.nombre || !formCerveza.descripcion || !formCerveza.graduacion || !formCerveza.tipo) {
@@ -69,10 +60,10 @@ export default function Admin() {
     try {
       if (editandoCerveza) {
         await cervezasAPI.actualizar(editandoCerveza._id, formCerveza);
-        setExito('✓ Cerveza actualizada');
+        setExito('Cerveza actualizada');
       } else {
         await cervezasAPI.crear(formCerveza);
-        setExito('✓ Cerveza creada');
+        setExito('Cerveza creada');
       }
       setFormCerveza({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
       setEditandoCerveza(null);
@@ -89,7 +80,7 @@ export default function Admin() {
     if (window.confirm('¿Estás seguro de que deseas eliminar esta cerveza?')) {
       try {
         await cervezasAPI.eliminar(id);
-        setExito('✓ Cerveza eliminada');
+        setExito('Cerveza eliminada');
         cargarDatos();
         setTimeout(() => setExito(''), 3000);
       } catch (err) {
@@ -98,7 +89,6 @@ export default function Admin() {
     }
   };
 
-  // ===== VINOS =====
   const guardarVino = async (e) => {
     e.preventDefault();
     if (!formVino.nombre || !formVino.descripcion || !formVino.graduacion || !formVino.tipo) {
@@ -111,10 +101,10 @@ export default function Admin() {
     try {
       if (editandoVino) {
         await vinosAPI.actualizar(editandoVino._id, formVino);
-        setExito('✓ Vino actualizado');
+        setExito('Vino actualizado');
       } else {
         await vinosAPI.crear(formVino);
-        setExito('✓ Vino creado');
+        setExito('Vino creado');
       }
       setFormVino({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
       setEditandoVino(null);
@@ -131,7 +121,7 @@ export default function Admin() {
     if (window.confirm('¿Estás seguro de que deseas eliminar este vino?')) {
       try {
         await vinosAPI.eliminar(id);
-        setExito('✓ Vino eliminado');
+        setExito('Vino eliminado');
         cargarDatos();
         setTimeout(() => setExito(''), 3000);
       } catch (err) {
@@ -140,340 +130,214 @@ export default function Admin() {
     }
   };
 
+  const renderFormulario = (titulo, form, setForm, onSubmit, editando, onCancel, placeholderTipo) => (
+    <div className="panel-dark rounded-[2rem] p-6 text-[#fff4e6] lg:sticky lg:top-28">
+      <h2 className="font-display text-4xl">{titulo}</h2>
+      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+        {[
+          ['Nombre', 'nombre'],
+          ['Graduación', 'graduacion'],
+          ['Tipo', 'tipo'],
+        ].map(([label, key]) => (
+          <div key={key}>
+            <label className="mb-2 block text-xs font-extrabold uppercase tracking-[0.18em] text-[#d8bb98]">{label}</label>
+            <input
+              type={key === 'graduacion' ? 'number' : 'text'}
+              step={key === 'graduacion' ? '0.1' : undefined}
+              value={form[key]}
+              onChange={(e) => setForm({ ...form, [key]: e.target.value })}
+              placeholder={key === 'tipo' ? placeholderTipo : ''}
+              className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.08)] px-4 py-3 outline-none transition focus:border-[#d8bb98]"
+            />
+          </div>
+        ))}
+
+        <div>
+          <label className="mb-2 block text-xs font-extrabold uppercase tracking-[0.18em] text-[#d8bb98]">Descripción</label>
+          <textarea
+            value={form.descripcion}
+            onChange={(e) => setForm({ ...form, descripcion: e.target.value })}
+            rows="4"
+            className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.08)] px-4 py-3 outline-none transition focus:border-[#d8bb98]"
+          />
+        </div>
+
+        <button
+          type="submit"
+          disabled={cargando}
+          className="wood-button w-full rounded-[1.1rem] px-4 py-3 text-sm font-bold uppercase tracking-[0.16em] disabled:opacity-50"
+        >
+          {cargando ? 'Guardando...' : editando ? 'Actualizar' : 'Crear'}
+        </button>
+
+        {editando && (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.08)] px-4 py-3 text-sm font-bold uppercase tracking-[0.16em]"
+          >
+            Cancelar
+          </button>
+        )}
+      </form>
+    </div>
+  );
+
+  const renderLista = (items, onEdit, onDelete) => (
+    <div className="grid gap-4 md:grid-cols-2">
+      {cargando ? (
+        <p className="text-[#f1decd]">Cargando...</p>
+      ) : items.length === 0 ? (
+        <div className="panel rounded-[1.8rem] p-8 text-[#6d5040]">No hay elementos.</div>
+      ) : (
+        items.map((item) => (
+          <article key={item._id} className="panel rounded-[1.8rem] p-5">
+            <h3 className="font-display text-3xl text-[#2d201a]">{item.nombre}</h3>
+            <p className="mt-2 line-clamp-2 text-sm text-[#5c4335]">{item.descripcion}</p>
+            <div className="mt-4 flex justify-between text-sm text-[#7a5945]">
+              <span>{item.graduacion}°</span>
+              <span>{item.tipo}</span>
+            </div>
+            <div className="mt-5 flex gap-3">
+              <button
+                onClick={() => onEdit(item)}
+                className="wood-button-soft flex-1 rounded-[1rem] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em]"
+              >
+                Editar
+              </button>
+              <button
+                onClick={() => onDelete(item._id)}
+                className="flex-1 rounded-[1rem] border border-[#d9b7b7] bg-[#fff6f6] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] text-[#8d4a4a]"
+              >
+                Eliminar
+              </button>
+            </div>
+          </article>
+        ))
+      )}
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-800 to-gray-900 py-12">
-      <div className="max-w-7xl mx-auto px-4">
-        {/* Header */}
-        <div className="mb-12">
-          <h1 className="text-4xl font-bold text-white mb-2">🔧 Panel de Administración</h1>
-          <p className="text-gray-400">Bienvenido, {usuario?.nombre || usuario?.email}</p>
+    <div className="page-shell bg-[linear-gradient(180deg,rgba(34,24,20,0.96),rgba(20,14,11,0.98))]">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8">
+          <span className="eyebrow border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.08)] text-[#d8bb98]">Panel</span>
+          <h1 className="mt-4 font-display text-5xl text-[#fff4e6]">Administración</h1>
+          <p className="mt-3 text-[#d6b895]">Bienvenido, {usuario?.nombre || usuario?.email}</p>
         </div>
 
-        {/* Alertas */}
-        {error && (
-          <div className="bg-red-900 border border-red-700 text-red-100 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
-        {exito && (
-          <div className="bg-green-900 border border-green-700 text-green-100 px-4 py-3 rounded-lg mb-6">
-            {exito}
-          </div>
-        )}
+        {error && <div className="mb-6 rounded-[1.3rem] border border-[#7b3f3f] bg-[#4a2224] px-4 py-3 text-[#ffdada]">{error}</div>}
+        {exito && <div className="mb-6 rounded-[1.3rem] border border-[#4d704a] bg-[#243827] px-4 py-3 text-[#daf4d8]">{exito}</div>}
 
-        {/* Tabs */}
-        <div className="flex gap-4 mb-12 border-b border-gray-700">
-          <button
-            onClick={() => setSeccion('cervezas')}
-            className={`px-6 py-3 font-semibold transition border-b-2 ${
-              seccion === 'cervezas'
-                ? 'text-purple-400 border-purple-400'
-                : 'text-gray-400 border-transparent hover:text-gray-200'
-            }`}
-          >
-            🍺 Cervezas
-          </button>
-          <button
-            onClick={() => setSeccion('vinos')}
-            className={`px-6 py-3 font-semibold transition border-b-2 ${
-              seccion === 'vinos'
-                ? 'text-purple-400 border-purple-400'
-                : 'text-gray-400 border-transparent hover:text-gray-200'
-            }`}
-          >
-            🍷 Vinos
-          </button>
-          <button
-            onClick={() => setSeccion('pedidos')}
-            className={`px-6 py-3 font-semibold transition border-b-2 ${
-              seccion === 'pedidos'
-                ? 'text-purple-400 border-purple-400'
-                : 'text-gray-400 border-transparent hover:text-gray-200'
-            }`}
-          >
-            📋 Pedidos
-          </button>
+        <div className="mb-8 flex flex-wrap gap-3">
+          {['cervezas', 'vinos', 'pedidos'].map((key) => (
+            <button
+              key={key}
+              onClick={() => setSeccion(key)}
+              className={`rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-[0.16em] transition ${
+                seccion === key
+                  ? 'wood-button text-[#fff8ef]'
+                  : 'border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.05)] text-[#f1decd]'
+              }`}
+            >
+              {key}
+            </button>
+          ))}
         </div>
 
-        {/* CERVEZAS */}
         {seccion === 'cervezas' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Formulario */}
-            <div className="lg:col-span-1">
-              <div className="bg-gray-700 rounded-lg p-6 sticky top-20">
-                <h2 className="text-xl font-bold text-white mb-4">
-                  {editandoCerveza ? '✏️ Editar Cerveza' : '➕ Crear Cerveza'}
-                </h2>
-                <form onSubmit={guardarCerveza} className="space-y-4">
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-2">Nombre</label>
-                    <input
-                      type="text"
-                      value={formCerveza.nombre}
-                      onChange={(e) => setFormCerveza({ ...formCerveza, nombre: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:border-purple-400 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-2">Descripción</label>
-                    <textarea
-                      value={formCerveza.descripcion}
-                      onChange={(e) => setFormCerveza({ ...formCerveza, descripcion: e.target.value })}
-                      rows="3"
-                      className="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:border-purple-400 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-2">Graduación</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={formCerveza.graduacion}
-                      onChange={(e) => setFormCerveza({ ...formCerveza, graduacion: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:border-purple-400 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-2">Tipo</label>
-                    <input
-                      type="text"
-                      value={formCerveza.tipo}
-                      onChange={(e) => setFormCerveza({ ...formCerveza, tipo: e.target.value })}
-                      placeholder="IPA, Lager, Stout..."
-                      className="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:border-purple-400 transition"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={cargando}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 rounded hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-50"
-                  >
-                    {cargando ? '⏳' : editandoCerveza ? '✓ Actualizar' : '✓ Crear'}
-                  </button>
-                  {editandoCerveza && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditandoCerveza(null);
-                        setFormCerveza({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
-                      }}
-                      className="w-full bg-gray-600 text-white font-bold py-2 rounded hover:bg-gray-500 transition"
-                    >
-                      Cancelar
-                    </button>
-                  )}
-                </form>
-              </div>
-            </div>
-
-            {/* Lista */}
-            <div className="lg:col-span-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {cargando ? (
-                  <p className="text-gray-300">Cargando...</p>
-                ) : cervezas.length === 0 ? (
-                  <p className="text-gray-300">No hay cervezas</p>
-                ) : (
-                  cervezas.map((cerveza) => (
-                    <div key={cerveza._id} className="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition">
-                      <h3 className="font-bold text-white mb-2">{cerveza.nombre}</h3>
-                      <p className="text-sm text-gray-300 mb-2 line-clamp-2">{cerveza.descripcion}</p>
-                      <div className="flex justify-between text-xs text-gray-400 mb-3">
-                        <span>{cerveza.graduacion}°</span>
-                        <span>{cerveza.tipo}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setEditandoCerveza(cerveza);
-                            setFormCerveza(cerveza);
-                          }}
-                          className="flex-1 bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700 transition text-sm"
-                        >
-                          ✏️ Editar
-                        </button>
-                        <button
-                          onClick={() => eliminarCerveza(cerveza._id)}
-                          className="flex-1 bg-red-600 text-white font-semibold py-2 rounded hover:bg-red-700 transition text-sm"
-                        >
-                          🗑️ Eliminar
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+            {renderFormulario(
+              editandoCerveza ? 'Editar cerveza' : 'Crear cerveza',
+              formCerveza,
+              setFormCerveza,
+              guardarCerveza,
+              editandoCerveza,
+              () => {
+                setEditandoCerveza(null);
+                setFormCerveza({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
+              },
+              'IPA, Lager, Stout...'
+            )}
+            {renderLista(
+              cervezas,
+              (cerveza) => {
+                setEditandoCerveza(cerveza);
+                setFormCerveza(cerveza);
+              },
+              eliminarCerveza
+            )}
           </div>
         )}
 
-        {/* VINOS */}
         {seccion === 'vinos' && (
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Formulario */}
-            <div className="lg:col-span-1">
-              <div className="bg-gray-700 rounded-lg p-6 sticky top-20">
-                <h2 className="text-xl font-bold text-white mb-4">
-                  {editandoVino ? '✏️ Editar Vino' : '➕ Crear Vino'}
-                </h2>
-                <form onSubmit={guardarVino} className="space-y-4">
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-2">Nombre</label>
-                    <input
-                      type="text"
-                      value={formVino.nombre}
-                      onChange={(e) => setFormVino({ ...formVino, nombre: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:border-purple-400 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-2">Descripción</label>
-                    <textarea
-                      value={formVino.descripcion}
-                      onChange={(e) => setFormVino({ ...formVino, descripcion: e.target.value })}
-                      rows="3"
-                      className="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:border-purple-400 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-2">Graduación</label>
-                    <input
-                      type="number"
-                      step="0.1"
-                      value={formVino.graduacion}
-                      onChange={(e) => setFormVino({ ...formVino, graduacion: e.target.value })}
-                      className="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:border-purple-400 transition"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-gray-300 font-semibold mb-2">Tipo</label>
-                    <input
-                      type="text"
-                      value={formVino.tipo}
-                      onChange={(e) => setFormVino({ ...formVino, tipo: e.target.value })}
-                      placeholder="Tinto, Blanco, Rosado..."
-                      className="w-full px-3 py-2 bg-gray-600 text-white rounded border border-gray-500 focus:border-purple-400 transition"
-                    />
-                  </div>
-                  <button
-                    type="submit"
-                    disabled={cargando}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-2 rounded hover:from-purple-700 hover:to-blue-700 transition disabled:opacity-50"
-                  >
-                    {cargando ? '⏳' : editandoVino ? '✓ Actualizar' : '✓ Crear'}
-                  </button>
-                  {editandoVino && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setEditandoVino(null);
-                        setFormVino({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
-                      }}
-                      className="w-full bg-gray-600 text-white font-bold py-2 rounded hover:bg-gray-500 transition"
-                    >
-                      Cancelar
-                    </button>
-                  )}
-                </form>
-              </div>
-            </div>
-
-            {/* Lista */}
-            <div className="lg:col-span-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {cargando ? (
-                  <p className="text-gray-300">Cargando...</p>
-                ) : vinos.length === 0 ? (
-                  <p className="text-gray-300">No hay vinos</p>
-                ) : (
-                  vinos.map((vino) => (
-                    <div key={vino._id} className="bg-gray-700 rounded-lg p-4 hover:bg-gray-600 transition">
-                      <h3 className="font-bold text-white mb-2">{vino.nombre}</h3>
-                      <p className="text-sm text-gray-300 mb-2 line-clamp-2">{vino.descripcion}</p>
-                      <div className="flex justify-between text-xs text-gray-400 mb-3">
-                        <span>{vino.graduacion}°</span>
-                        <span>{vino.tipo}</span>
-                      </div>
-                      <div className="flex gap-2">
-                        <button
-                          onClick={() => {
-                            setEditandoVino(vino);
-                            setFormVino(vino);
-                          }}
-                          className="flex-1 bg-blue-600 text-white font-semibold py-2 rounded hover:bg-blue-700 transition text-sm"
-                        >
-                          ✏️ Editar
-                        </button>
-                        <button
-                          onClick={() => eliminarVino(vino._id)}
-                          className="flex-1 bg-red-600 text-white font-semibold py-2 rounded hover:bg-red-700 transition text-sm"
-                        >
-                          🗑️ Eliminar
-                        </button>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+          <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+            {renderFormulario(
+              editandoVino ? 'Editar vino' : 'Crear vino',
+              formVino,
+              setFormVino,
+              guardarVino,
+              editandoVino,
+              () => {
+                setEditandoVino(null);
+                setFormVino({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
+              },
+              'Tinto, Blanco, Rosado...'
+            )}
+            {renderLista(
+              vinos,
+              (vino) => {
+                setEditandoVino(vino);
+                setFormVino(vino);
+              },
+              eliminarVino
+            )}
           </div>
         )}
 
-        {/* PEDIDOS */}
         {seccion === 'pedidos' && (
-          <div>
-            <div className="grid grid-cols-1 gap-4">
-              {cargando ? (
-                <p className="text-gray-300">Cargando...</p>
-              ) : pedidos.length === 0 ? (
-                <p className="text-gray-300">No hay pedidos</p>
-              ) : (
-                pedidos.map((pedido) => (
-                  <div key={pedido._id} className="bg-gray-700 rounded-lg p-6 hover:bg-gray-600 transition">
-                    <div className="flex justify-between items-start mb-4">
-                      <div>
-                        <h3 className="font-bold text-white text-lg">
-                          Pedido #{pedido._id.slice(-8).toUpperCase()}
-                        </h3>
-                        <p className="text-sm text-gray-400">
-                          {new Date(pedido.createdAt).toLocaleDateString('es-ES')}
-                        </p>
-                      </div>
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          pedido.estado === 'pendiente'
-                            ? 'bg-yellow-900 text-yellow-200'
-                            : pedido.estado === 'confirmado'
-                            ? 'bg-green-900 text-green-200'
-                            : 'bg-red-900 text-red-200'
-                        }`}
-                      >
-                        {pedido.estado}
-                      </span>
-                    </div>
-
-                    <div className="mb-4">
-                      <p className="text-gray-300 text-sm mb-2">
-                        <strong>Productos:</strong> {pedido.items.length}
+          <div className="space-y-4">
+            {cargando ? (
+              <p className="text-[#f1decd]">Cargando...</p>
+            ) : pedidos.length === 0 ? (
+              <div className="panel rounded-[1.8rem] p-8 text-[#6d5040]">No hay pedidos.</div>
+            ) : (
+              pedidos.map((pedido) => (
+                <article key={pedido._id} className="panel rounded-[1.8rem] p-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                    <div>
+                      <h3 className="font-display text-3xl text-[#2d201a]">
+                        Pedido #{pedido._id.slice(-8).toUpperCase()}
+                      </h3>
+                      <p className="mt-2 text-sm text-[#6d5040]">
+                        {new Date(pedido.createdAt).toLocaleDateString('es-ES')}
                       </p>
-                      <div className="space-y-1 text-sm text-gray-400">
-                        {pedido.items.map((item, idx) => (
-                          <p key={idx}>
-                            {item.tipo === 'cerveza' ? '🍺' : '🍷'} {item.nombre} x{item.cantidad}
-                          </p>
-                        ))}
-                      </div>
                     </div>
-
-                    {pedido.notas && (
-                      <div className="mb-4 bg-gray-600 rounded p-3 text-sm text-gray-300">
-                        <strong>Notas:</strong> {pedido.notas}
-                      </div>
-                    )}
+                    <span className="rounded-full border border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.08)] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.16em] text-[#7a5945]">
+                      {pedido.estado}
+                    </span>
                   </div>
-                ))
-              )}
-            </div>
+
+                  <div className="mt-5 rounded-[1.4rem] border border-[rgba(121,88,66,0.12)] bg-[rgba(255,255,255,0.44)] p-4 text-[#5c4335]">
+                    <p className="text-sm font-bold uppercase tracking-[0.18em] text-[#7a5945]">Productos</p>
+                    <div className="mt-3 space-y-2 text-sm">
+                      {pedido.items.map((item, idx) => (
+                        <p key={idx}>
+                          {item.nombre} x{item.cantidad}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+
+                  {pedido.notas && (
+                    <div className="mt-4 rounded-[1.3rem] border border-[rgba(121,88,66,0.12)] bg-[rgba(121,88,66,0.06)] p-4 text-sm text-[#6d5040]">
+                      <strong>Notas:</strong> {pedido.notas}
+                    </div>
+                  )}
+                </article>
+              ))
+            )}
           </div>
         )}
       </div>

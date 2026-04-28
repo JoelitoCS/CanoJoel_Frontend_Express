@@ -6,7 +6,7 @@ import { pedidosAPI } from '../services/api';
 
 export default function Carrito() {
   const { items, actualizarCantidad, eliminarProducto, vaciarCarrito } = useCarrito();
-  const { usuario, autenticado } = useAuth();
+  const { autenticado } = useAuth();
   const navigate = useNavigate();
   const [notas, setNotas] = useState('');
   const [cargando, setCargando] = useState(false);
@@ -30,7 +30,7 @@ export default function Carrito() {
 
     try {
       await pedidosAPI.crear(items, notas);
-      setExito('¡Pedido realizado exitosamente!');
+      setExito('Pedido realizado exitosamente');
       vaciarCarrito();
       setNotas('');
       setTimeout(() => {
@@ -45,21 +45,16 @@ export default function Carrito() {
 
   if (items.length === 0 && !exito) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-12">
-        <div className="max-w-7xl mx-auto px-4">
-          <h1 className="text-4xl font-bold text-gray-800 mb-8">🛒 Carrito de Compras</h1>
-
-          <div className="bg-white rounded-lg shadow-lg p-12 text-center">
-            <div className="text-6xl mb-4">🛒</div>
-            <h2 className="text-2xl font-bold text-gray-800 mb-2">Tu carrito está vacío</h2>
-            <p className="text-gray-600 mb-8">
-              ¡Explora nuestro catálogo y agrega algunos productos!
-            </p>
+      <div className="page-shell">
+        <div className="mx-auto max-w-5xl">
+          <div className="panel rounded-[2rem] p-12 text-center">
+            <h1 className="font-display text-5xl text-[#2d201a]">Tu carrito está vacío</h1>
+            <p className="mt-4 text-[#6d5040]">Explora el catálogo y añade productos a tu selección.</p>
             <button
               onClick={() => navigate('/')}
-              className="bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 px-8 rounded-lg hover:from-purple-700 hover:to-blue-700 transition"
+              className="wood-button mt-8 rounded-full px-6 py-3 text-sm font-bold uppercase tracking-[0.16em]"
             >
-              Ver Catálogo
+              Ver catálogo
             </button>
           </div>
         </div>
@@ -68,152 +63,124 @@ export default function Carrito() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 to-blue-50 py-12">
-      <div className="max-w-7xl mx-auto px-4">
-        <h1 className="text-4xl font-bold text-gray-800 mb-8">🛒 Carrito de Compras</h1>
+    <div className="page-shell">
+      <div className="mx-auto max-w-7xl">
+        <div className="mb-8">
+          <span className="eyebrow">Carrito</span>
+          <h1 className="mt-4 font-display text-5xl text-[#2d201a]">Resumen de compra</h1>
+        </div>
 
-        {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg mb-6">
-            {error}
-          </div>
-        )}
+        {error && <div className="mb-6 rounded-[1.3rem] border border-[#d6a9a9] bg-[#fff2f2] px-4 py-3 text-[#7b3f3f]">{error}</div>}
+        {exito && <div className="mb-6 rounded-[1.3rem] border border-[#abc8a8] bg-[#f3fbf1] px-4 py-3 text-[#446243]">{exito}</div>}
 
-        {exito && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg mb-6">
-            {exito}
-          </div>
-        )}
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Lista de productos */}
-          <div className="lg:col-span-2">
-            <div className="bg-white rounded-lg shadow-lg overflow-hidden">
+        <div className="grid gap-8 lg:grid-cols-[1.3fr_0.7fr]">
+          <div className="space-y-6">
+            <div className="panel overflow-hidden rounded-[2rem]">
               {items.map((item) => (
                 <div
                   key={`${item.productoId}-${item.tipo}`}
-                  className="border-b p-6 hover:bg-gray-50 transition flex justify-between items-center"
+                  className="flex flex-col gap-4 border-b border-[rgba(121,88,66,0.12)] px-6 py-5 last:border-b-0 sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="flex-1">
-                    <h3 className="font-bold text-lg text-gray-800">{item.nombre}</h3>
-                    <p className="text-sm text-gray-600 capitalize">
-                      {item.tipo === 'cerveza' ? '🍺 Cerveza' : '🍷 Vino'}
-                    </p>
+                  <div>
+                    <h3 className="font-display text-3xl text-[#2d201a]">{item.nombre}</h3>
+                    <p className="text-sm capitalize text-[#6d5040]">{item.tipo}</p>
                   </div>
 
-                  <div className="flex items-center space-x-4">
-                    <div className="flex items-center border border-gray-300 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div className="flex items-center rounded-full border border-[rgba(121,88,66,0.16)] bg-[rgba(255,255,255,0.5)] px-2 py-1">
                       <button
                         onClick={() => actualizarCantidad(item.productoId, item.tipo, item.cantidad - 1)}
-                        className="px-3 py-2 text-red-600 hover:bg-red-50"
+                        className="h-10 w-10 rounded-full text-lg text-[#7a5945] transition hover:bg-[rgba(121,88,66,0.1)]"
                       >
-                        −
+                        -
                       </button>
-                      <span className="px-4 py-2 font-semibold text-gray-800">
-                        {item.cantidad}
-                      </span>
+                      <span className="px-4 font-bold text-[#2d201a]">{item.cantidad}</span>
                       <button
                         onClick={() => actualizarCantidad(item.productoId, item.tipo, item.cantidad + 1)}
-                        className="px-3 py-2 text-green-600 hover:bg-green-50"
+                        className="h-10 w-10 rounded-full text-lg text-[#7a5945] transition hover:bg-[rgba(121,88,66,0.1)]"
                       >
                         +
                       </button>
                     </div>
-
                     <button
                       onClick={() => eliminarProducto(item.productoId, item.tipo)}
-                      className="text-red-600 hover:text-red-800 font-bold text-xl"
+                      className="rounded-full border border-[#d9b7b7] px-4 py-2 text-sm font-bold text-[#8d4a4a] transition hover:bg-[#fff2f2]"
                     >
-                      🗑️
+                      Eliminar
                     </button>
                   </div>
                 </div>
               ))}
             </div>
 
-            {/* Notas */}
-            <div className="mt-8 bg-white rounded-lg shadow-lg p-6">
-              <h3 className="font-bold text-lg text-gray-800 mb-4">📝 Notas adicionales</h3>
+            <div className="panel rounded-[2rem] p-6">
+              <h2 className="font-display text-3xl text-[#2d201a]">Notas adicionales</h2>
               <textarea
                 value={notas}
                 onChange={(e) => setNotas(e.target.value)}
                 placeholder="Agrega instrucciones especiales o comentarios sobre tu pedido..."
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:border-purple-500 transition"
-                rows="4"
+                className="mt-4 min-h-32 w-full rounded-[1.2rem] border border-[rgba(121,88,66,0.18)] bg-[rgba(255,252,247,0.9)] px-4 py-3.5 outline-none transition focus:border-[#a77953] focus:bg-white"
               />
             </div>
           </div>
 
-          {/* Resumen */}
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-lg shadow-lg p-6 sticky top-20">
-              <h2 className="text-2xl font-bold text-gray-800 mb-6">📦 Resumen</h2>
-
-              <div className="space-y-4 mb-6">
-                <div className="flex justify-between text-gray-700">
-                  <span>Total de artículos:</span>
-                  <span className="font-semibold">
-                    {items.reduce((sum, item) => sum + item.cantidad, 0)}
-                  </span>
-                </div>
-                <div className="flex justify-between text-gray-700">
-                  <span>Diferentes productos:</span>
-                  <span className="font-semibold">{items.length}</span>
-                </div>
+          <aside className="panel rounded-[2rem] p-6 lg:sticky lg:top-28 lg:h-fit">
+            <h2 className="font-display text-3xl text-[#2d201a]">Resumen</h2>
+            <div className="mt-6 space-y-4 text-[#5c4335]">
+              <div className="flex justify-between">
+                <span>Total de artículos</span>
+                <span className="font-bold text-[#2d201a]">{items.reduce((sum, item) => sum + item.cantidad, 0)}</span>
               </div>
-
-              <div className="border-t border-b py-4 mb-6">
-                <div className="flex justify-between text-gray-800 font-bold text-lg">
-                  <span>Subtotal:</span>
-                  <span>$ -{items.length} prod.</span>
-                </div>
-                <p className="text-xs text-gray-600 mt-2 italic">
-                  * El pago se gestiona en checkout
-                </p>
+              <div className="flex justify-between">
+                <span>Productos distintos</span>
+                <span className="font-bold text-[#2d201a]">{items.length}</span>
               </div>
-
-              {autenticado ? (
-                <div className="space-y-3">
-                  <button
-                    onClick={handleConfirmarPedido}
-                    disabled={cargando || items.length === 0}
-                    className="w-full bg-gradient-to-r from-green-600 to-emerald-600 text-white font-bold py-3 rounded-lg hover:from-green-700 hover:to-emerald-700 transition disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    {cargando ? '⏳ Procesando...' : '✓ Confirmar Pedido'}
-                  </button>
-                  <button
-                    onClick={() => navigate('/')}
-                    className="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-lg hover:bg-gray-300 transition"
-                  >
-                    Seguir Comprando
-                  </button>
-                  <button
-                    onClick={vaciarCarrito}
-                    className="w-full bg-red-100 text-red-600 font-bold py-3 rounded-lg hover:bg-red-200 transition"
-                  >
-                    Vaciar Carrito
-                  </button>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  <p className="text-center text-gray-600 mb-4">
-                    Debes iniciar sesión para confirmar tu pedido
-                  </p>
-                  <button
-                    onClick={() => navigate('/login')}
-                    className="w-full bg-gradient-to-r from-purple-600 to-blue-600 text-white font-bold py-3 rounded-lg hover:from-purple-700 hover:to-blue-700 transition"
-                  >
-                    Iniciar Sesión
-                  </button>
-                  <button
-                    onClick={() => navigate('/registro')}
-                    className="w-full bg-gray-200 text-gray-800 font-bold py-3 rounded-lg hover:bg-gray-300 transition"
-                  >
-                    Registrarse
-                  </button>
-                </div>
-              )}
             </div>
-          </div>
+
+            <div className="my-6 rounded-[1.4rem] border border-[rgba(121,88,66,0.12)] bg-[rgba(255,255,255,0.44)] p-4">
+              <p className="text-sm text-[#6d5040]">El pago se gestiona en checkout.</p>
+            </div>
+
+            {autenticado ? (
+              <div className="space-y-3">
+                <button
+                  onClick={handleConfirmarPedido}
+                  disabled={cargando || items.length === 0}
+                  className="wood-button w-full rounded-[1.2rem] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.16em] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {cargando ? 'Procesando...' : 'Confirmar pedido'}
+                </button>
+                <button
+                  onClick={() => navigate('/')}
+                  className="wood-button-soft w-full rounded-[1.2rem] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.16em]"
+                >
+                  Seguir comprando
+                </button>
+                <button
+                  onClick={vaciarCarrito}
+                  className="w-full rounded-[1.2rem] border border-[#d9b7b7] bg-[#fff6f6] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.16em] text-[#8d4a4a]"
+                >
+                  Vaciar carrito
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                <p className="text-sm text-[#6d5040]">Debes iniciar sesión para confirmar tu pedido.</p>
+                <button
+                  onClick={() => navigate('/login')}
+                  className="wood-button w-full rounded-[1.2rem] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.16em]"
+                >
+                  Iniciar sesión
+                </button>
+                <button
+                  onClick={() => navigate('/registro')}
+                  className="wood-button-soft w-full rounded-[1.2rem] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.16em]"
+                >
+                  Registrarse
+                </button>
+              </div>
+            )}
+          </aside>
         </div>
       </div>
     </div>
