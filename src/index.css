@@ -1,0 +1,85 @@
+@import "tailwindcss";
+
+@theme {
+  --font-display: 'Playfair Display', Georgia, serif;
+  --font-body: 'Inter', system-ui, sans-serif;
+
+  --color-wine-950: #1a0008;
+  --color-wine-900: #2d0012;
+  --color-wine-800: #4a0f1c;
+  --color-wine-700: #6b1a2a;
+  --color-wine-600: #8b2535;
+  --color-wine-500: #a83045;
+  --color-wine-400: #c54d62;
+  --color-wine-300: #d97a8a;
+  --color-wine-200: #e8a8b3;
+  --color-wine-100: #f5d5da;
+  --color-wine-50:  #fdf0f2;
+
+  --color-gold-900: #7a4f00;
+  --color-gold-700: #b07a00;
+  --color-gold-500: #c9a84c;
+  --color-gold-400: #d4b96a;
+  --color-gold-300: #e2cf96;
+  --color-gold-200: #ede3be;
+  --color-gold-100: #f5edda;
+  --color-gold-50:  #faf6ec;
+
+  --color-stone-950: #1c1410;
+  --color-stone-800: #3d2e24;
+  --color-stone-600: #7a5c48;
+  --color-stone-400: #a89080;
+  --color-stone-200: #e0d4cc;
+  --color-stone-100: #f0e8e2;
+  --color-stone-50:  #faf6f3;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  font-family: var(--font-body);
+  background-color: var(--color-stone-50);
+  color: var(--color-stone-950);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+}
+
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: var(--color-stone-100); }
+::-webkit-scrollbar-thumb { background: var(--color-wine-600); border-radius: 3px; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-fade-up  { animation: fadeUp 0.45s ease both; }
+.animate-fade-in  { animation: fadeIn 0.35s ease both; }
+
+.delay-100 { animation-delay: 0.1s; }
+.delay-200 { animation-delay: 0.2s; }
+.delay-300 { animation-delay: 0.3s; }
+.delay-400 { animation-delay: 0.4s; }
+.delay-500 { animation-delay: 0.5s; }
+
+.skeleton {
+  background: linear-gradient(90deg, var(--color-stone-100) 25%, var(--color-stone-200) 50%, var(--color-stone-100) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s infinite;
+  border-radius: 6px;
+}
+
+.font-display { font-family: var(--font-display); }
