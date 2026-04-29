@@ -3,7 +3,7 @@ import { cervezasAPI, vinosAPI } from '../services/api';
 import { Link } from 'react-router-dom';
 import { useCarrito } from '../context/CarritoContext';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL;
 
 export default function Home() {
   const [cervezas, setCervezas] = useState([]);
