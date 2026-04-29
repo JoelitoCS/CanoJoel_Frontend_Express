@@ -37,9 +37,19 @@ export const authAPI = {
     return fetch(`${API_URL}/auth/registro`, {
       method: 'POST',
       body: formData,
+      // NO incluir Content-Type - el navegador lo establece automáticamente con FormData
     }).then(r => {
-      if (!r.ok) throw new Error('Error en el registro');
+      if (!r.ok) {
+        return r.json().then(err => {
+          throw new Error(err.error || 'Error en el registro');
+        }).catch(e => {
+          throw new Error('Error en el registro');
+        });
+      }
       return r.json();
+    }).catch(err => {
+      console.error('Error en registro:', err);
+      throw err;
     });
   },
 
