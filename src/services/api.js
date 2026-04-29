@@ -28,29 +28,38 @@ const fetchAPI = async (endpoint, options = {}) => {
 // Auth
 export const authAPI = {
   registro: (email, password, nombre, foto) => {
-    const formData = new FormData();
-    formData.append('email', email);
-    formData.append('password', password);
-    formData.append('nombre', nombre);
-    if (foto) formData.append('foto', foto);
+    // Si hay foto, usar FormData; si no, usar JSON
+    if (foto) {
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+      formData.append('nombre', nombre);
+      formData.append('foto', foto);
 
-    return fetch(`${API_URL}/auth/registro`, {
-      method: 'POST',
-      body: formData,
-      // NO incluir Content-Type - el navegador lo establece automáticamente con FormData
-    }).then(r => {
-      if (!r.ok) {
-        return r.json().then(err => {
-          throw new Error(err.error || 'Error en el registro');
-        }).catch(e => {
-          throw new Error('Error en el registro');
-        });
-      }
-      return r.json();
-    }).catch(err => {
-      console.error('Error en registro:', err);
-      throw err;
-    });
+      return fetch(`${API_URL}/auth/registro`, {
+        method: 'POST',
+        body: formData,
+        // NO incluir Content-Type - el navegador lo establece automáticamente
+      }).then(r => {
+        if (!r.ok) {
+          return r.json().then(err => {
+            throw new Error(err.error || 'Error en el registro');
+          }).catch(e => {
+            throw new Error('Error en el registro');
+          });
+        }
+        return r.json();
+      }).catch(err => {
+        console.error('Error en registro:', err);
+        throw err;
+      });
+    } else {
+      // Sin foto, usar JSON
+      return fetchAPI('/auth/registro', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, nombre }),
+      });
+    }
   },
 
   login: (email, password) =>
