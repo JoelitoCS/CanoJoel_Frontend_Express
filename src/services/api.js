@@ -25,6 +25,75 @@ const fetchAPI = async (endpoint, options = {}) => {
   return response.json();
 };
 
+// Helper especifico para peticiones con archivos.
+// Aqui NO ponemos Content-Type porque el navegador debe crear el boundary del multipart/form-data.
+const fetchFormDataAPI = async (endpoint, formData, options = {}) => {
+  const token = localStorage.getItem('token');
+  const headers = {
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+    throw new Error(error.error || `Error ${response.status}`);
+  }
+
+  return response.json();
+};
+
+// Convierte los datos del formulario del admin a FormData cuando hay una imagen.
+// El backend espera el archivo con el nombre de campo "imatge".
+const crearFormDataProducto = (datos) => {
+  const formData = new FormData();
+
+  Object.entries(datos).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+
+    // archivoImagen solo existe en el frontend; en la API se manda como "imatge".
+    if (key === 'archivoImagen') {
+      formData.append('imatge', value);
+      return;
+    }
+
+    // previewImagen es solo una URL temporal del navegador para mostrar la vista previa.
+    if (key === 'previewImagen') return;
+
+    formData.append(key, value);
+  });
+
+  return formData;
+};
+
+// Decide si hay que enviar multipart/form-data o JSON normal.
+const tieneArchivoProducto = (datos) => datos?.archivoImagen instanceof File;
+
+// Quita campos que solo usa React antes de mandar JSON a MongoDB.
+const limpiarDatosProducto = (datos) => {
+  const { archivoImagen, previewImagen, ...datosLimpios } = datos;
+  return datosLimpios;
+};
+
+const guardarProducto = (endpoint, method, datos) => {
+  if (tieneArchivoProducto(datos)) {
+    return fetchFormDataAPI(endpoint, crearFormDataProducto(datos), { method });
+  }
+
+  return fetchAPI(endpoint, {
+    method,
+    body: JSON.stringify(limpiarDatosProducto(datos)),
+  });
+};
+
 // Auth
 export const authAPI = {
   registro: (email, password, nombre, foto) => {
@@ -82,15 +151,9 @@ export const cervezasAPI = {
   obtener: () => fetchAPI('/cervezas'),
   obtenerPorId: (id) => fetchAPI(`/cervezas/${id}`),
   crear: (datos) =>
-    fetchAPI('/cervezas', {
-      method: 'POST',
-      body: JSON.stringify(datos),
-    }),
+    guardarProducto('/cervezas', 'POST', datos),
   actualizar: (id, datos) =>
-    fetchAPI(`/cervezas/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(datos),
-    }),
+    guardarProducto(`/cervezas/${id}`, 'PUT', datos),
   eliminar: (id) =>
     fetchAPI(`/cervezas/${id}`, {
       method: 'DELETE',
@@ -114,15 +177,9 @@ export const vinosAPI = {
   obtener: () => fetchAPI('/vinos'),
   obtenerPorId: (id) => fetchAPI(`/vinos/${id}`),
   crear: (datos) =>
-    fetchAPI('/vinos', {
-      method: 'POST',
-      body: JSON.stringify(datos),
-    }),
+    guardarProducto('/vinos', 'POST', datos),
   actualizar: (id, datos) =>
-    fetchAPI(`/vinos/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(datos),
-    }),
+    guardarProducto(`/vinos/${id}`, 'PUT', datos),
   eliminar: (id) =>
     fetchAPI(`/vinos/${id}`, {
       method: 'DELETE',
