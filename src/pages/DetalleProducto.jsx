@@ -87,12 +87,8 @@ export default function DetalleProducto() {
             <img
               src={obtenerImagenUrl(producto.imagen)}
               alt={producto.nombre}
-              className={`h-full max-h-[38rem] w-full rounded-[1.6rem] ${
-                // En detalle tambien evitamos que las cervezas queden demasiado ampliadas o cortadas.
-                tipo === 'cerveza'
-                  ? 'bg-[rgba(255,248,240,0.72)] object-contain p-6'
-                  : 'object-cover'
-              }`}
+              // En detalle mostramos la imagen completa para cervezas y vinos, evitando zoom o recortes.
+              className="h-full max-h-[38rem] w-full rounded-[1.6rem] bg-[rgba(255,248,240,0.72)] object-contain p-6"
             />
           </div>
 

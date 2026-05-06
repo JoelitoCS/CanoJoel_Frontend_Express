@@ -47,12 +47,8 @@ export default function Home() {
         <img
           src={obtenerImagenUrl(producto.imagen)}
           alt={producto.nombre}
-          className={`h-64 w-full transition duration-700 ${
-            // Las cervezas suelen ser botellas/latas verticales; object-contain evita el zoom y los recortes.
-            tipo === 'cerveza'
-              ? 'bg-[rgba(255,248,240,0.72)] object-contain p-5 group-hover:scale-[1.02]'
-              : 'object-cover group-hover:scale-105'
-          }`}
+          // object-contain muestra la botella completa, tanto en cervezas como en vinos, sin recortarla.
+          className="h-64 w-full bg-[rgba(255,248,240,0.72)] object-contain p-5 transition duration-700 group-hover:scale-[1.02]"
         />
         <span className="absolute left-5 top-5 rounded-full border border-[rgba(255,244,230,0.45)] bg-[rgba(32,22,18,0.54)] px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.25em] text-[#f8e7d1]">
           {tipo}
