@@ -55,12 +55,6 @@ Bienvenido a la documentación de VinaShop. Aquí encontrarás guías para empez
   - Debugging
   - Seguridad
 
-- **[CHANGES_SUMMARY.md](CHANGES_SUMMARY.md)** - Resumen de cambios
-  - Archivos creados/modificados
-  - Estadísticas
-  - Funcionalidades implementadas
-  - Endpoints utilizados
-  - Próximas mejoras
 
 ### README Principal
 - **[FRONTEND_README.md](FRONTEND_README.md)** - Documentación oficial

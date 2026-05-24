@@ -1,16 +1,19 @@
-# React + Vite
+﻿# Vinacoteca Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Aplicación web de presentación y gestión de cervezas y vinos artesanales. Incluye catálogo de productos, ficha de detalle, carrito de compra y panel de administración para crear o editar referencias.
 
-Currently, two official plugins are available:
+- Listado de cervezas y vinos con información de graduación, perfil y descripción.
+- Fallback visual cuando no hay imagen disponible para evitar mostrar una imagen rota.
+- Navegación entre catálogo y detalle de producto.
+- Integración con backend para obtener datos de productos y gestionar el carrito.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Credenciales de administrador
 
-## React Compiler
+- Email: `admin@vinacoteca.com`
+- Password: `admin123`
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Uso
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+1. Instala dependencias con `npm install`.
+2. Inicia la app en desarrollo con `npm run dev`.
+3. Accede con las credenciales de administrador para usar el panel de administración.

@@ -34,10 +34,12 @@ export default function DetalleProducto() {
   }, [tipo, id]);
 
   const obtenerImagenUrl = (imagen) => {
-    if (!imagen) return 'https://via.placeholder.com/400x400?text=Sin+imagen';
+    if (!imagen) return null;
     if (imagen.startsWith('http')) return imagen;
     return `${API_URL.replace('/api', '')}/${imagen}`;
   };
+
+  const [imagenError, setImagenError] = useState(false);
 
   const handleAgregar = () => {
     agregarProducto(producto, cantidad);
@@ -84,12 +86,20 @@ export default function DetalleProducto() {
 
         <div className="grid gap-8 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="panel overflow-hidden rounded-[2.1rem] p-6">
-            <img
-              src={obtenerImagenUrl(producto.imagen)}
-              alt={producto.nombre}
-              // En detalle mostramos la imagen completa para cervezas y vinos, evitando zoom o recortes.
-              className="h-full max-h-[38rem] w-full rounded-[1.6rem] bg-[rgba(255,248,240,0.72)] object-contain p-6"
-            />
+            {obtenerImagenUrl(producto.imagen) && !imagenError ? (
+              <img
+                src={obtenerImagenUrl(producto.imagen)}
+                alt={producto.nombre}
+                onError={() => setImagenError(true)}
+                // En detalle mostramos la imagen completa para cervezas y vinos, evitando zoom o recortes.
+                className="h-full max-h-[38rem] w-full rounded-[1.6rem] bg-[rgba(255,248,240,0.72)] object-contain p-6"
+              />
+            ) : (
+              <div className="flex h-full max-h-[38rem] w-full flex-col items-center justify-center rounded-[1.6rem] bg-[rgba(255,248,240,0.72)] text-[5rem] text-[#7a5945]">
+                {producto.tipo === 'cerveza' ? '🍺' : '🍷'}
+                <p className="mt-6 text-base font-bold uppercase tracking-[0.2em] text-[#5c4335]">Sin imagen disponible</p>
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
