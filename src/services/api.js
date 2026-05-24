@@ -208,4 +208,9 @@ export const pedidosAPI = {
   misPedidos: () => fetchAPI('/pedidos/me'),
   obtener: () => fetchAPI('/pedidos'),
   obtenerPorId: (id) => fetchAPI(`/pedidos/${id}`),
+  actualizarEstado: (id, estado) =>
+    fetchAPI(`/pedidos/${id}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado }),
+    }),
 };

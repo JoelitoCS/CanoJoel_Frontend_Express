@@ -50,6 +50,20 @@ export default function Admin() {
   const [editandoVino, setEditandoVino] = useState(null);
   const [pedidos, setPedidos] = useState([]);
 
+  const cambiarEstadoPedido = async (id, nuevoEstado) => {
+    try {
+      await pedidosAPI.actualizarEstado(id, nuevoEstado);
+      setExito(`Pedido marcado como ${nuevoEstado}`);
+      // Actualizar localmente sin recargar todo
+      setPedidos((prev) =>
+        prev.map((p) => (p._id === id ? { ...p, estado: nuevoEstado } : p))
+      );
+      setTimeout(() => setExito(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Error al actualizar el estado');
+    }
+  };
+
   useEffect(() => {
     if (!autenticado || !esAdmin) {
       navigate('/');
@@ -396,8 +410,22 @@ export default function Admin() {
                       <p className="mt-2 text-sm text-[#6d5040]">
                         {new Date(pedido.createdAt).toLocaleDateString('es-ES')}
                       </p>
+                      {pedido.usuario && (
+                        <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-[#8c684d]">
+                          {pedido.usuario.nombre || pedido.usuario.email}
+                        </p>
+                      )}
                     </div>
-                    <span className="rounded-full border border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.08)] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.16em] text-[#7a5945]">
+                    {/* Badge de estado con color dinámico */}
+                    <span
+                      className={`rounded-full border px-4 py-2 text-xs font-extrabold uppercase tracking-[0.16em] ${
+                        pedido.estado === 'confirmado'
+                          ? 'border-[#4d704a] bg-[#243827] text-[#7ecf7a]'
+                          : pedido.estado === 'cancelado'
+                          ? 'border-[#7b3f3f] bg-[#4a2224] text-[#ffa0a0]'
+                          : 'border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.08)] text-[#7a5945]'
+                      }`}
+                    >
                       {pedido.estado}
                     </span>
                   </div>
@@ -416,6 +444,36 @@ export default function Admin() {
                   {pedido.notas && (
                     <div className="mt-4 rounded-[1.3rem] border border-[rgba(121,88,66,0.12)] bg-[rgba(121,88,66,0.06)] p-4 text-sm text-[#6d5040]">
                       <strong>Notas:</strong> {pedido.notas}
+                    </div>
+                  )}
+
+                  {/* Botones de acción — solo visibles si el pedido aún no está resuelto */}
+                  {pedido.estado === 'pendiente' && (
+                    <div className="mt-5 flex gap-3">
+                      <button
+                        onClick={() => cambiarEstadoPedido(pedido._id, 'confirmado')}
+                        className="flex-1 rounded-[1rem] border border-[#4d704a] bg-[#243827] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] text-[#7ecf7a] transition hover:bg-[#2e4a30]"
+                      >
+                        ✓ Confirmar
+                      </button>
+                      <button
+                        onClick={() => cambiarEstadoPedido(pedido._id, 'cancelado')}
+                        className="flex-1 rounded-[1rem] border border-[#7b3f3f] bg-[#4a2224] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] text-[#ffa0a0] transition hover:bg-[#5a2a2c]"
+                      >
+                        ✕ Cancelar
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Si ya tiene estado final, permitir volver a pendiente */}
+                  {pedido.estado !== 'pendiente' && (
+                    <div className="mt-5">
+                      <button
+                        onClick={() => cambiarEstadoPedido(pedido._id, 'pendiente')}
+                        className="w-full rounded-[1rem] border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.08)] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] text-[#d8bb98] transition hover:bg-[rgba(255,248,240,0.14)]"
+                      >
+                        ↺ Restablecer a pendiente
+                      </button>
                     </div>
                   )}
                 </article>
