@@ -1,4 +1,6 @@
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
+
+console.log('🌐 [API.JS] API_URL:', API_URL);
 
 // Helper para hacer peticiones
 const fetchAPI = async (endpoint, options = {}) => {
@@ -12,14 +14,22 @@ const fetchAPI = async (endpoint, options = {}) => {
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  const response = await fetch(`${API_URL}/api${endpoint}`, {
     ...options,
     headers,
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
-    throw new Error(error.error || `Error ${response.status}`);
+    const errorBody = await response.text().catch(() => '');
+    let errorMessage = `Error ${response.status}`;
+    try {
+      const json = JSON.parse(errorBody);
+      errorMessage = json.error || json.message || errorMessage;
+    } catch {
+      if (errorBody) errorMessage = errorBody;
+      else if (response.statusText) errorMessage = response.statusText;
+    }
+    throw new Error(errorMessage);
   }
 
   return response.json();
@@ -27,20 +37,49 @@ const fetchAPI = async (endpoint, options = {}) => {
 
 // Auth
 export const authAPI = {
-  registro: (email, password, nombre, foto) => {
-    const formData = new FormData();
-    formData.append('email', email);
-    formData.append('password', password);
-    formData.append('nombre', nombre);
-    if (foto) formData.append('foto', foto);
+  registro: async (email, password, nombre, foto) => {
+    try {
+      console.log('📤 [authAPI.registro] Enviando registro...');
+      console.log('  📧 Email:', email);
+      console.log('  📝 Nombre:', nombre);
+      console.log('  📸 Foto:', foto ? `${foto.name} (${foto.size} bytes)` : 'Sin foto');
 
-    return fetch(`${API_URL}/auth/registro`, {
-      method: 'POST',
-      body: formData,
-    }).then(r => {
-      if (!r.ok) throw new Error('Error en el registro');
-      return r.json();
-    });
+      const formData = new FormData();
+      formData.append('email', email);
+      formData.append('password', password);
+      formData.append('nombre', nombre);
+      if (foto) formData.append('foto', foto);
+
+      const token = localStorage.getItem('token');
+      const headers = {};
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const url = `${API_URL}/api/auth/registro`;
+      console.log('📨 POST:', url);
+
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+        headers,
+      });
+
+      console.log('📊 Status:', response.status);
+      const data = await response.json();
+      console.log('📦 Response:', data);
+
+      if (!response.ok) {
+        console.error('❌ Error:', data);
+        throw new Error(data.error || `Error ${response.status}`);
+      }
+
+      console.log('✅ Registro exitoso');
+      return data;
+    } catch (err) {
+      console.error('❌ [authAPI.registro]:', err.message);
+      throw err;
+    }
   },
 
   login: (email, password) =>
@@ -51,11 +90,38 @@ export const authAPI = {
 
   perfil: () => fetchAPI('/auth/perfil'),
 
-  actualizarPerfil: (datos) =>
-    fetchAPI('/auth/perfil', {
+  actualizarPerfil: async (datos) => {
+    if (datos.foto instanceof File) {
+      const formData = new FormData();
+      if (datos.nombre) formData.append('nombre', datos.nombre);
+      if (datos.email) formData.append('email', datos.email);
+      if (datos.password) formData.append('password', datos.password);
+      formData.append('foto', datos.foto);
+
+      const url = `${API_URL}/api/auth/perfil`;
+      const headers = {};
+      const token = localStorage.getItem('token');
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+
+      const response = await fetch(url, {
+        method: 'PUT',
+        body: formData,
+        headers,
+      });
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || `Error ${response.status}`);
+      }
+
+      return data;
+    }
+
+    return fetchAPI('/auth/perfil', {
       method: 'PUT',
       body: JSON.stringify(datos),
-    }),
+    });
+  },
 };
 
 // Cervezas
@@ -80,7 +146,7 @@ export const cervezasAPI = {
     const formData = new FormData();
     formData.append('imatge', archivo);
 
-    return fetch(`${API_URL}/cervezas/${id}/imatge`, {
+    return fetch(`${API_URL}/api/cervezas/${id}/imatge`, {
       method: 'PATCH',
       body: formData,
       headers: {
@@ -112,7 +178,7 @@ export const vinosAPI = {
     const formData = new FormData();
     formData.append('imatge', archivo);
 
-    return fetch(`${API_URL}/vinos/${id}/imatge`, {
+    return fetch(`${API_URL}/api/vinos/${id}/imatge`, {
       method: 'PATCH',
       body: formData,
       headers: {
@@ -120,6 +186,16 @@ export const vinosAPI = {
       },
     }).then(r => r.json());
   },
+};
+
+// Usuarios
+export const usuariosAPI = {
+  obtener: () => fetchAPI('/usuaris'),
+  actualizarRol: (id, rol) =>
+    fetchAPI(`/usuaris/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ rol }),
+    }),
 };
 
 // Pedidos
@@ -132,4 +208,9 @@ export const pedidosAPI = {
   misPedidos: () => fetchAPI('/pedidos/me'),
   obtener: () => fetchAPI('/pedidos'),
   obtenerPorId: (id) => fetchAPI(`/pedidos/${id}`),
+  actualizarEstado: (id, estado) =>
+    fetchAPI(`/pedidos/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ estado }),
+    }),
 };

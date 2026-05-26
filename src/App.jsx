@@ -10,6 +10,7 @@ import Carrito from './pages/Carrito'
 import Perfil from './pages/Perfil'
 import MisPedidos from './pages/MisPedidos'
 import Admin from './pages/Admin'
+import Editor from './pages/Editor'
 
 function App() {
   return (
@@ -26,6 +27,7 @@ function App() {
             <Route path="/perfil" element={<Perfil />} />
             <Route path="/mis-pedidos" element={<MisPedidos />} />
             <Route path="/admin" element={<Admin />} />
+            <Route path="/editor" element={<Editor />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </CarritoProvider>

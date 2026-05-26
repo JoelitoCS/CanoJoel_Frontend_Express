@@ -8,7 +8,8 @@ const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 export default function Perfil() {
   const { usuario, logout, actualizarUsuario } = useAuth();
   const navigate = useNavigate();
-  const [formData, setFormData] = useState({ nombre: '', email: '', password: '' });
+  const [formData, setFormData] = useState({ nombre: '', email: '', password: '', foto: null });
+  const [fotoPreview, setFotoPreview] = useState('');
   const [cargando, setCargando] = useState(false);
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
@@ -22,13 +23,22 @@ export default function Perfil() {
         nombre: usuario.nombre || '',
         email: usuario.email || '',
         password: '',
+        foto: null,
       });
+      setFotoPreview('');
     }
   }, [usuario, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleFotoChange = (e) => {
+    const archivo = e.target.files[0];
+    if (!archivo) return;
+    setFormData((prev) => ({ ...prev, foto: archivo }));
+    setFotoPreview(URL.createObjectURL(archivo));
   };
 
   const handleGuardar = async (e) => {
@@ -42,6 +52,7 @@ export default function Perfil() {
       if (formData.nombre !== usuario.nombre) datosActualizar.nombre = formData.nombre;
       if (formData.email !== usuario.email) datosActualizar.email = formData.email;
       if (formData.password) datosActualizar.password = formData.password;
+      if (formData.foto) datosActualizar.foto = formData.foto;
 
       if (Object.keys(datosActualizar).length === 0) {
         setError('No hay cambios para guardar');
@@ -50,9 +61,11 @@ export default function Perfil() {
       }
 
       const respuesta = await authAPI.actualizarPerfil(datosActualizar);
-      actualizarUsuario(respuesta.usuari || respuesta);
+      const usuarioActualizado = respuesta.usuari || respuesta;
+      actualizarUsuario(usuarioActualizado);
       setExito('Perfil actualizado correctamente');
-      setFormData((prev) => ({ ...prev, password: '' }));
+      setFormData((prev) => ({ ...prev, password: '', foto: null }));
+      setFotoPreview('');
       setEditando(false);
       setTimeout(() => setExito(''), 3000);
     } catch (err) {
@@ -68,6 +81,14 @@ export default function Perfil() {
       navigate('/');
     }
   };
+
+  const fotoUrl = fotoPreview
+    ? fotoPreview
+    : usuario.foto
+    ? usuario.foto.startsWith('http')
+      ? usuario.foto
+      : `${API_URL.replace('/api', '')}${usuario.foto.startsWith('/') ? usuario.foto : '/' + usuario.foto}`
+    : null;
 
   if (!usuario) {
     return (
@@ -87,9 +108,9 @@ export default function Perfil() {
 
         <div className="grid gap-8 lg:grid-cols-[0.85fr_1.15fr]">
           <aside className="panel rounded-[2rem] p-8 text-center">
-            {usuario.foto ? (
+            {fotoUrl ? (
               <img
-                src={usuario.foto.startsWith('http') ? usuario.foto : `${API_URL.replace('/api', '')}${usuario.foto}`}
+                src={fotoUrl}
                 alt={usuario.nombre}
                 className="mx-auto h-28 w-28 rounded-full border-4 border-[rgba(121,88,66,0.18)] object-cover"
               />
@@ -132,7 +153,13 @@ export default function Perfil() {
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="font-display text-4xl text-[#2d201a]">Información de la cuenta</h2>
               <button
-                onClick={() => setEditando(!editando)}
+                onClick={() => {
+                  if (editando) {
+                    setFormData((prev) => ({ ...prev, foto: null, password: '' }));
+                    setFotoPreview('');
+                  }
+                  setEditando((prev) => !prev);
+                }}
                 className="wood-button-soft rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-[0.16em]"
               >
                 {editando ? 'Cancelar' : 'Editar'}
@@ -169,9 +196,7 @@ export default function Perfil() {
 
               {editando && (
                 <div>
-                  <label className="mb-2 block text-sm font-bold uppercase tracking-[0.18em] text-[#7a5945]">
-                    Nueva contraseña
-                  </label>
+                  <label className="mb-2 block text-sm font-bold uppercase tracking-[0.18em] text-[#7a5945]">Nueva contraseña</label>
                   <input
                     type="password"
                     name="password"
@@ -183,20 +208,42 @@ export default function Perfil() {
                 </div>
               )}
 
-              <div className="rounded-[1.3rem] border border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.06)] p-4 text-sm text-[#6d5040]">
-                Solo puedes editar tu información personal. El rol de usuario no se modifica desde aquí.
+            {editando && (
+              <div>
+                <label className="mb-2 block text-sm font-bold uppercase tracking-[0.18em] text-[#7a5945]">Foto de perfil</label>
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleFotoChange}
+                  className="w-full rounded-[1.2rem] border border-dashed border-[rgba(121,88,66,0.24)] bg-[rgba(255,252,247,0.75)] px-4 py-3"
+                />
+                {formData.foto && (
+                  <p className="mt-2 text-sm font-semibold text-[#6d5040]">{formData.foto.name}</p>
+                )}
+                {fotoPreview && (
+                  <img
+                    src={fotoPreview}
+                    alt="Nueva foto de perfil"
+                    className="mt-4 h-28 w-28 rounded-full object-cover"
+                  />
+                )}
               </div>
+            )}
 
-              {editando && (
-                <button
-                  type="submit"
-                  disabled={cargando}
-                  className="wood-button w-full rounded-[1.2rem] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.16em] disabled:cursor-not-allowed disabled:opacity-50"
-                >
-                  {cargando ? 'Guardando...' : 'Guardar cambios'}
-                </button>
-              )}
-            </form>
+            <div className="rounded-[1.3rem] border border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.06)] p-4 text-sm text-[#6d5040]">
+              Solo puedes editar tu información personal. El rol de usuario no se modifica desde aquí.
+            </div>
+
+            {editando && (
+              <button
+                type="submit"
+                disabled={cargando}
+                className="wood-button w-full rounded-[1.2rem] px-4 py-3.5 text-sm font-bold uppercase tracking-[0.16em] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {cargando ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            )}
+          </form>
           </section>
         </div>
       </div>

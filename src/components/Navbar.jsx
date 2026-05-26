@@ -3,6 +3,8 @@ import { useAuth } from '../context/AuthContext';
 import { useCarrito } from '../context/CarritoContext';
 import { useState } from 'react';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
 export default function Navbar() {
   const { usuario, logout, autenticado } = useAuth();
   const { obtenerTotal } = useCarrito();
@@ -10,14 +12,31 @@ export default function Navbar() {
   const [menuAbierto, setMenuAbierto] = useState(false);
 
   const total = obtenerTotal();
+  const [perfilAbierto, setPerfilAbierto] = useState(false);
 
   const handleLogout = () => {
     logout();
     navigate('/');
     setMenuAbierto(false);
+    setPerfilAbierto(false);
   };
 
   const closeMenu = () => setMenuAbierto(false);
+  const togglePerfil = () => setPerfilAbierto((prev) => !prev);
+  const closePerfil = () => setPerfilAbierto(false);
+
+  const obtenerAvatar = () => {
+    if (!usuario) return null;
+    if (!usuario.foto) return null;
+
+    const foto = usuario.foto.trim();
+    if (foto.startsWith('http')) return foto;
+
+    const base = API_URL.replace(/\/api\/?$/, '');
+    return new URL(foto.startsWith('/') ? foto : `/${foto}`, `${base}/`).href;
+  };
+
+  const avatarUrl = obtenerAvatar();
 
   return (
     <nav className="sticky top-0 z-50 border-b border-[rgba(121,88,66,0.18)] bg-[rgba(37,26,21,0.84)] text-[#f7efe3] shadow-[0_20px_40px_rgba(30,20,15,0.28)] backdrop-blur-xl">
@@ -70,23 +89,47 @@ export default function Navbar() {
                   Admin
                 </Link>
               )}
+              {usuario?.rol === 'editor' && (
+                <Link
+                  to="/editor"
+                  className="rounded-full border border-[rgba(231,205,176,0.2)] px-4 py-2 text-sm font-semibold tracking-wide text-[#f3d7b1] transition hover:bg-[rgba(255,248,240,0.08)]"
+                >
+                  Editor
+                </Link>
+              )}
               <Link
                 to="/mis-pedidos"
                 className="rounded-full px-4 py-2 text-sm font-semibold tracking-wide text-[#efe1cf] transition hover:bg-[rgba(255,248,240,0.08)]"
               >
                 Mis pedidos
               </Link>
-              <div className="group relative">
-                <button className="flex items-center gap-2 rounded-full border border-[rgba(231,205,176,0.18)] bg-[rgba(255,248,240,0.06)] px-4 py-2 text-sm font-semibold text-[#fff4e6] transition hover:bg-[rgba(255,248,240,0.12)]">
-                  <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(231,205,176,0.14)] text-xs uppercase tracking-[0.2em]">
-                    {(usuario?.nombre || usuario?.email || 'U').slice(0, 1)}
-                  </span>
+              <div className="relative">
+                <button
+                  onClick={togglePerfil}
+                  className="flex items-center gap-2 rounded-full border border-[rgba(231,205,176,0.18)] bg-[rgba(255,248,240,0.06)] px-4 py-2 text-sm font-semibold text-[#fff4e6] transition hover:bg-[rgba(255,248,240,0.12)]"
+                >
+                  {avatarUrl ? (
+                    <img
+                      src={avatarUrl}
+                      alt={usuario?.nombre || 'Usuario'}
+                      className="h-7 w-7 rounded-full object-cover"
+                    />
+                  ) : (
+                    <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[rgba(231,205,176,0.14)] text-xs uppercase tracking-[0.2em]">
+                      {(usuario?.nombre || usuario?.email || 'U').slice(0, 1)}
+                    </span>
+                  )}
                   <span className="max-w-40 truncate">{usuario?.nombre || usuario?.email}</span>
                   <span className="text-xs text-[#d2b28c]">▼</span>
                 </button>
-                <div className="pointer-events-none absolute right-0 mt-3 w-56 translate-y-2 rounded-3xl border border-[rgba(121,88,66,0.18)] bg-[rgba(255,252,247,0.96)] p-2 text-[#2d201a] opacity-0 shadow-[0_25px_45px_rgba(47,31,23,0.18)] transition duration-200 group-hover:pointer-events-auto group-hover:translate-y-0 group-hover:opacity-100">
+                <div
+                  className={`absolute right-0 mt-3 w-56 rounded-3xl border border-[rgba(121,88,66,0.18)] bg-[rgba(255,252,247,0.96)] p-2 text-[#2d201a] shadow-[0_25px_45px_rgba(47,31,23,0.18)] transition duration-200 ${
+                    perfilAbierto ? 'opacity-100 translate-y-0 pointer-events-auto' : 'opacity-0 translate-y-2 pointer-events-none'
+                  }`}
+                >
                   <Link
                     to="/perfil"
+                    onClick={closePerfil}
                     className="block rounded-2xl px-4 py-3 text-sm font-semibold transition hover:bg-[rgba(121,88,66,0.08)]"
                   >
                     Mi perfil
@@ -158,6 +201,15 @@ export default function Navbar() {
                     onClick={closeMenu}
                   >
                     Admin
+                  </Link>
+                )}
+                {usuario?.rol === 'editor' && (
+                  <Link
+                    to="/editor"
+                    className="block rounded-2xl px-4 py-3 font-semibold text-[#f3d7b1] transition hover:bg-[rgba(255,248,240,0.08)]"
+                    onClick={closeMenu}
+                  >
+                    Editor
                   </Link>
                 )}
                 <Link

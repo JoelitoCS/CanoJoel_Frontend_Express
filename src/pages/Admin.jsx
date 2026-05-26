@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
-import { cervezasAPI, vinosAPI, pedidosAPI } from '../services/api';
+import { cervezasAPI, vinosAPI, pedidosAPI, usuariosAPI } from '../services/api';
 
 export default function Admin() {
   const { usuario, autenticado, esAdmin } = useAuth();
@@ -17,6 +17,9 @@ export default function Admin() {
   const [formVino, setFormVino] = useState({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
   const [editandoVino, setEditandoVino] = useState(null);
   const [pedidos, setPedidos] = useState([]);
+  const [usuarios, setUsuarios] = useState([]);
+  const [actualizandoUsuario, setActualizandoUsuario] = useState(null);
+  const [actualizandoPedido, setActualizandoPedido] = useState(null);
 
   useEffect(() => {
     if (!autenticado || !esAdmin) {
@@ -40,9 +43,17 @@ export default function Admin() {
       } else if (seccion === 'pedidos') {
         const data = await pedidosAPI.obtener();
         setPedidos(data?.dades || []);
+      } else if (seccion === 'usuarios') {
+        const data = await usuariosAPI.obtener();
+        setUsuarios(data?.dades || []);
       }
     } catch (err) {
-      setError(err.message || 'Error al cargar datos');
+      const mensaje = err.message || 'Error al cargar datos';
+      if (seccion === 'usuarios' && mensaje.includes('404')) {
+        setError('La API de usuarios no está disponible en este backend. Debe exponer GET /api/usuaris y PUT /api/usuaris/:id para que esta sección funcione.');
+      } else {
+        setError(mensaje);
+      }
     } finally {
       setCargando(false);
     }
@@ -127,6 +138,41 @@ export default function Admin() {
       } catch (err) {
         setError(err.message);
       }
+    }
+  };
+
+  const actualizarRol = async (usuarioItem) => {
+    if (usuarioItem._id === usuario._id) {
+      setError('No puedes cambiar tu propio rol desde aquí.');
+      return;
+    }
+
+    setActualizandoUsuario(usuarioItem._id);
+    setError('');
+    try {
+      await usuariosAPI.actualizarRol(usuarioItem._id, usuarioItem.rol || 'user');
+      setExito('Rol actualizado correctamente.');
+      cargarDatos();
+      setTimeout(() => setExito(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Error al actualizar el rol');
+    } finally {
+      setActualizandoUsuario(null);
+    }
+  };
+
+  const actualizarEstadoPedido = async (pedidoId, estado) => {
+    setActualizandoPedido(pedidoId);
+    setError('');
+    try {
+      await pedidosAPI.actualizarEstado(pedidoId, estado);
+      setExito(`Pedido ${estado} correctamente.`);
+      cargarDatos();
+      setTimeout(() => setExito(''), 3000);
+    } catch (err) {
+      setError(err.message || `Error al actualizar el pedido a ${estado}`);
+    } finally {
+      setActualizandoPedido(null);
     }
   };
 
@@ -231,7 +277,7 @@ export default function Admin() {
         {exito && <div className="mb-6 rounded-[1.3rem] border border-[#4d704a] bg-[#243827] px-4 py-3 text-[#daf4d8]">{exito}</div>}
 
         <div className="mb-8 flex flex-wrap gap-3">
-          {['cervezas', 'vinos', 'pedidos'].map((key) => (
+          {['cervezas', 'vinos', 'pedidos', 'usuarios'].map((key) => (
             <button
               key={key}
               onClick={() => setSeccion(key)}
@@ -296,6 +342,56 @@ export default function Admin() {
           </div>
         )}
 
+        {seccion === 'usuarios' && (
+          <div className="space-y-4">
+            {cargando ? (
+              <p className="text-[#f1decd]">Cargando...</p>
+            ) : usuarios.length === 0 ? (
+              <div className="panel rounded-[1.8rem] p-8 text-[#6d5040]">No hay usuarios registrados.</div>
+            ) : (
+              usuarios.map((usuarioItem) => (
+                <article key={usuarioItem._id} className="panel rounded-[1.8rem] p-6">
+                  <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <h3 className="font-display text-3xl text-[#2d201a]">{usuarioItem.nombre || usuarioItem.email}</h3>
+                      <p className="mt-2 text-sm text-[#6d5040]">{usuarioItem.email}</p>
+                    </div>
+                    <span className="rounded-full border border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.08)] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.16em] text-[#7a5945]">
+                      {usuarioItem.rol || 'user'}
+                    </span>
+                  </div>
+
+                  <div className="mt-5 grid gap-4 sm:grid-cols-[1fr_auto]">
+                    <select
+                      value={usuarioItem.rol || 'user'}
+                      onChange={(e) => {
+                        const nuevosUsuarios = usuarios.map((u) =>
+                          u._id === usuarioItem._id ? { ...u, rol: e.target.value } : u
+                        );
+                        setUsuarios(nuevosUsuarios);
+                      }}
+                      disabled={usuarioItem._id === usuario._id}
+                      className="w-full rounded-[1.1rem] border border-[#b78c66] bg-[#fff4e0] px-4 py-3 text-[#2d201a] shadow-sm outline-none transition duration-200 focus:border-[#d8bb98] focus:ring-2 focus:ring-[#d8bb98]/40"
+                    >
+                      <option value="user">Usuario</option>
+                      <option value="editor">Editor</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                    <button
+                      type="button"
+                      onClick={() => actualizarRol(usuarioItem)}
+                      disabled={usuarioItem._id === usuario._id || actualizandoUsuario === usuarioItem._id}
+                      className="wood-button-soft rounded-[1rem] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] disabled:opacity-50"
+                    >
+                      {actualizandoUsuario === usuarioItem._id ? 'Guardando...' : 'Guardar rol'}
+                    </button>
+                  </div>
+                </article>
+              ))
+            )}
+          </div>
+        )}
+
         {seccion === 'pedidos' && (
           <div className="space-y-4">
             {cargando ? (
@@ -333,6 +429,27 @@ export default function Admin() {
                   {pedido.notas && (
                     <div className="mt-4 rounded-[1.3rem] border border-[rgba(121,88,66,0.12)] bg-[rgba(121,88,66,0.06)] p-4 text-sm text-[#6d5040]">
                       <strong>Notas:</strong> {pedido.notas}
+                    </div>
+                  )}
+
+                  {pedido.estado === 'pendiente' && (
+                    <div className="mt-5 flex flex-wrap gap-3">
+                      <button
+                        type="button"
+                        onClick={() => actualizarEstadoPedido(pedido._id, 'confirmado')}
+                        disabled={actualizandoPedido === pedido._id}
+                        className="wood-button rounded-[1rem] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] disabled:opacity-50"
+                      >
+                        {actualizandoPedido === pedido._id ? 'Procesando...' : 'Confirmar'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => actualizarEstadoPedido(pedido._id, 'cancelado')}
+                        disabled={actualizandoPedido === pedido._id}
+                        className="rounded-[1rem] border border-[#d9b7b7] bg-[#fff6f6] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] text-[#8d4a4a] disabled:opacity-50"
+                      >
+                        {actualizandoPedido === pedido._id ? 'Procesando...' : 'Cancelar'}
+                      </button>
                     </div>
                   )}
                 </article>

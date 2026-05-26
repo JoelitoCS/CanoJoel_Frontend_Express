@@ -10,6 +10,7 @@ export default function Registro() {
     passwordConfirm: '',
     foto: null,
   });
+  const [fotoPreview, setFotoPreview] = useState('');
   const [error, setError] = useState('');
   const [cargando, setCargando] = useState(false);
   const { registro } = useAuth();
@@ -21,10 +22,12 @@ export default function Registro() {
   };
 
   const handleFotoChange = (e) => {
+    const archivo = e.target.files[0];
     setFormData((prev) => ({
       ...prev,
-      foto: e.target.files[0],
+      foto: archivo,
     }));
+    setFotoPreview(archivo ? URL.createObjectURL(archivo) : '');
   };
 
   const handleSubmit = async (e) => {
@@ -141,6 +144,13 @@ export default function Registro() {
             />
             {formData.foto && (
               <p className="mt-2 text-sm font-semibold text-[#6d5040]">{formData.foto.name}</p>
+            )}
+            {fotoPreview && (
+              <img
+                src={fotoPreview}
+                alt="Vista previa"
+                className="mt-4 h-28 w-28 rounded-full object-cover"
+              />
             )}
           </div>
 

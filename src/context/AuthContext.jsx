@@ -77,7 +77,7 @@ export function AuthProvider({ children }) {
       actualizarUsuario,
       autenticado: !!token,
       esAdmin: usuario?.rol === 'admin',
-      esEditor: usuario?.rol === 'editor' || usuario?.rol === 'admin',
+      esEditor: usuario?.rol === 'editor',
     }}>
       {children}
     </AuthContext.Provider>
