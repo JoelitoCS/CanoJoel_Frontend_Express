@@ -3,6 +3,38 @@ import { useAuth } from '../context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { cervezasAPI, vinosAPI, pedidosAPI, usuariosAPI } from '../services/api';
 
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+
+// Estado base para crear o editar un producto.
+// archivoImagen solo vive en React; la API lo recibira como FormData con el nombre "imatge".
+const productoInicial = {
+  nombre: '',
+  descripcion: '',
+  graduacion: '',
+  tipo: '',
+  imagen: '',
+  archivoImagen: null,
+  previewImagen: '',
+};
+
+// Construye el formulario desde un documento de MongoDB sin arrastrar campos internos (_id, __v...).
+const productoAFormulario = (producto) => ({
+  nombre: producto.nombre || '',
+  descripcion: producto.descripcion || '',
+  graduacion: producto.graduacion ?? '',
+  tipo: producto.tipo || '',
+  imagen: producto.imagen || '',
+  archivoImagen: null,
+  previewImagen: '',
+});
+
+// Convierte una ruta relativa guardada en MongoDB en una URL visible en el navegador.
+const obtenerImagenUrl = (imagen) => {
+  if (!imagen) return '';
+  if (imagen.startsWith('http')) return imagen;
+  return `${API_URL.replace('/api', '')}/${imagen}`;
+};
+
 export default function Admin() {
   const { usuario, autenticado, esAdmin } = useAuth();
   const navigate = useNavigate();
@@ -11,15 +43,29 @@ export default function Admin() {
   const [error, setError] = useState('');
   const [exito, setExito] = useState('');
   const [cervezas, setCervezas] = useState([]);
-  const [formCerveza, setFormCerveza] = useState({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
+  const [formCerveza, setFormCerveza] = useState(productoInicial);
   const [editandoCerveza, setEditandoCerveza] = useState(null);
   const [vinos, setVinos] = useState([]);
-  const [formVino, setFormVino] = useState({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
+  const [formVino, setFormVino] = useState(productoInicial);
   const [editandoVino, setEditandoVino] = useState(null);
   const [pedidos, setPedidos] = useState([]);
   const [usuarios, setUsuarios] = useState([]);
   const [actualizandoUsuario, setActualizandoUsuario] = useState(null);
   const [actualizandoPedido, setActualizandoPedido] = useState(null);
+
+  const cambiarEstadoPedido = async (id, nuevoEstado) => {
+    try {
+      await pedidosAPI.actualizarEstado(id, nuevoEstado);
+      setExito(`Pedido marcado como ${nuevoEstado}`);
+      // Actualizar localmente sin recargar todo
+      setPedidos((prev) =>
+        prev.map((p) => (p._id === id ? { ...p, estado: nuevoEstado } : p))
+      );
+      setTimeout(() => setExito(''), 3000);
+    } catch (err) {
+      setError(err.message || 'Error al actualizar el estado');
+    }
+  };
 
   useEffect(() => {
     if (!autenticado || !esAdmin) {
@@ -61,6 +107,7 @@ export default function Admin() {
 
   const guardarCerveza = async (e) => {
     e.preventDefault();
+    const formulario = e.currentTarget;
     if (!formCerveza.nombre || !formCerveza.descripcion || !formCerveza.graduacion || !formCerveza.tipo) {
       setError('Por favor completa todos los campos');
       return;
@@ -76,8 +123,9 @@ export default function Admin() {
         await cervezasAPI.crear(formCerveza);
         setExito('Cerveza creada');
       }
-      setFormCerveza({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
+      setFormCerveza({ ...productoInicial });
       setEditandoCerveza(null);
+      formulario.reset();
       cargarDatos();
       setTimeout(() => setExito(''), 3000);
     } catch (err) {
@@ -102,6 +150,7 @@ export default function Admin() {
 
   const guardarVino = async (e) => {
     e.preventDefault();
+    const formulario = e.currentTarget;
     if (!formVino.nombre || !formVino.descripcion || !formVino.graduacion || !formVino.tipo) {
       setError('Por favor completa todos los campos');
       return;
@@ -117,8 +166,9 @@ export default function Admin() {
         await vinosAPI.crear(formVino);
         setExito('Vino creado');
       }
-      setFormVino({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
+      setFormVino({ ...productoInicial });
       setEditandoVino(null);
+      formulario.reset();
       cargarDatos();
       setTimeout(() => setExito(''), 3000);
     } catch (err) {
@@ -179,7 +229,7 @@ export default function Admin() {
   const renderFormulario = (titulo, form, setForm, onSubmit, editando, onCancel, placeholderTipo) => (
     <div className="panel-dark rounded-[2rem] p-6 text-[#fff4e6] lg:sticky lg:top-28">
       <h2 className="font-display text-4xl">{titulo}</h2>
-      <form onSubmit={onSubmit} className="mt-6 space-y-4">
+      <form key={editando?._id || titulo} onSubmit={onSubmit} className="mt-6 space-y-4">
         {[
           ['Nombre', 'nombre'],
           ['Graduación', 'graduacion'],
@@ -206,6 +256,38 @@ export default function Admin() {
             rows="4"
             className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.08)] px-4 py-3 outline-none transition focus:border-[#d8bb98]"
           />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-xs font-extrabold uppercase tracking-[0.18em] text-[#d8bb98]">Foto del producto</label>
+
+          {(form.previewImagen || form.imagen) && (
+            <div className="mb-3 overflow-hidden rounded-[1.1rem] border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.08)]">
+              <img
+                src={form.previewImagen || obtenerImagenUrl(form.imagen)}
+                alt={form.nombre || 'Producto'}
+                className="h-40 w-full object-cover"
+              />
+            </div>
+          )}
+
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/gif,image/webp"
+            onChange={(e) => {
+              // Guardamos el File y una URL temporal para que el admin vea la nueva foto antes de guardar.
+              const archivo = e.target.files?.[0] || null;
+              const previewImagen = archivo ? URL.createObjectURL(archivo) : '';
+              setForm({ ...form, archivoImagen: archivo, previewImagen });
+            }}
+            className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.08)] px-4 py-3 text-sm outline-none file:mr-4 file:rounded-full file:border-0 file:bg-[#d8bb98] file:px-4 file:py-2 file:text-sm file:font-bold file:text-[#2d201a] focus:border-[#d8bb98]"
+          />
+
+          {form.archivoImagen && (
+            <p className="mt-2 text-xs font-bold uppercase tracking-[0.16em] text-[#d8bb98]">
+              Nueva foto seleccionada: {form.archivoImagen.name}
+            </p>
+          )}
         </div>
 
         <button
@@ -238,8 +320,23 @@ export default function Admin() {
       ) : (
         items.map((item) => (
           <article key={item._id} className="panel rounded-[1.8rem] p-5">
-            <h3 className="font-display text-3xl text-[#2d201a]">{item.nombre}</h3>
-            <p className="mt-2 line-clamp-2 text-sm text-[#5c4335]">{item.descripcion}</p>
+            <div className="flex gap-4">
+              {item.imagen ? (
+                <img
+                  src={obtenerImagenUrl(item.imagen)}
+                  alt={item.nombre}
+                  className="h-24 w-24 shrink-0 rounded-[1.1rem] object-cover"
+                />
+              ) : (
+                <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[1.1rem] border border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.08)] text-center text-[0.65rem] font-bold uppercase tracking-[0.14em] text-[#8c684d]">
+                  Sin foto
+                </div>
+              )}
+              <div className="min-w-0">
+                <h3 className="font-display text-3xl text-[#2d201a]">{item.nombre}</h3>
+                <p className="mt-2 line-clamp-2 text-sm text-[#5c4335]">{item.descripcion}</p>
+              </div>
+            </div>
             <div className="mt-4 flex justify-between text-sm text-[#7a5945]">
               <span>{item.graduacion}°</span>
               <span>{item.tipo}</span>
@@ -302,7 +399,7 @@ export default function Admin() {
               editandoCerveza,
               () => {
                 setEditandoCerveza(null);
-                setFormCerveza({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
+                setFormCerveza({ ...productoInicial });
               },
               'IPA, Lager, Stout...'
             )}
@@ -310,7 +407,7 @@ export default function Admin() {
               cervezas,
               (cerveza) => {
                 setEditandoCerveza(cerveza);
-                setFormCerveza(cerveza);
+                setFormCerveza(productoAFormulario(cerveza));
               },
               eliminarCerveza
             )}
@@ -327,7 +424,7 @@ export default function Admin() {
               editandoVino,
               () => {
                 setEditandoVino(null);
-                setFormVino({ nombre: '', descripcion: '', graduacion: '', tipo: '' });
+                setFormVino({ ...productoInicial });
               },
               'Tinto, Blanco, Rosado...'
             )}
@@ -335,7 +432,7 @@ export default function Admin() {
               vinos,
               (vino) => {
                 setEditandoVino(vino);
-                setFormVino(vino);
+                setFormVino(productoAFormulario(vino));
               },
               eliminarVino
             )}
@@ -409,8 +506,22 @@ export default function Admin() {
                       <p className="mt-2 text-sm text-[#6d5040]">
                         {new Date(pedido.createdAt).toLocaleDateString('es-ES')}
                       </p>
+                      {pedido.usuario && (
+                        <p className="mt-1 text-xs font-bold uppercase tracking-[0.14em] text-[#8c684d]">
+                          {pedido.usuario.nombre || pedido.usuario.email}
+                        </p>
+                      )}
                     </div>
-                    <span className="rounded-full border border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.08)] px-4 py-2 text-xs font-extrabold uppercase tracking-[0.16em] text-[#7a5945]">
+                    {/* Badge de estado con color dinámico */}
+                    <span
+                      className={`rounded-full border px-4 py-2 text-xs font-extrabold uppercase tracking-[0.16em] ${
+                        pedido.estado === 'confirmado'
+                          ? 'border-[#4d704a] bg-[#243827] text-[#7ecf7a]'
+                          : pedido.estado === 'cancelado'
+                          ? 'border-[#7b3f3f] bg-[#4a2224] text-[#ffa0a0]'
+                          : 'border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.08)] text-[#7a5945]'
+                      }`}
+                    >
                       {pedido.estado}
                     </span>
                   </div>
@@ -432,23 +543,32 @@ export default function Admin() {
                     </div>
                   )}
 
+                  {/* Botones de acción — solo visibles si el pedido aún no está resuelto */}
                   {pedido.estado === 'pendiente' && (
-                    <div className="mt-5 flex flex-wrap gap-3">
+                    <div className="mt-5 flex gap-3">
                       <button
-                        type="button"
-                        onClick={() => actualizarEstadoPedido(pedido._id, 'confirmado')}
-                        disabled={actualizandoPedido === pedido._id}
-                        className="wood-button rounded-[1rem] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] disabled:opacity-50"
+                        onClick={() => cambiarEstadoPedido(pedido._id, 'confirmado')}
+                        className="flex-1 rounded-[1rem] border border-[#4d704a] bg-[#243827] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] text-[#7ecf7a] transition hover:bg-[#2e4a30]"
                       >
-                        {actualizandoPedido === pedido._id ? 'Procesando...' : 'Confirmar'}
+                        ✓ Confirmar
                       </button>
                       <button
-                        type="button"
-                        onClick={() => actualizarEstadoPedido(pedido._id, 'cancelado')}
-                        disabled={actualizandoPedido === pedido._id}
-                        className="rounded-[1rem] border border-[#d9b7b7] bg-[#fff6f6] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] text-[#8d4a4a] disabled:opacity-50"
+                        onClick={() => cambiarEstadoPedido(pedido._id, 'cancelado')}
+                        className="flex-1 rounded-[1rem] border border-[#7b3f3f] bg-[#4a2224] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] text-[#ffa0a0] transition hover:bg-[#5a2a2c]"
                       >
-                        {actualizandoPedido === pedido._id ? 'Procesando...' : 'Cancelar'}
+                        ✕ Cancelar
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Si ya tiene estado final, permitir volver a pendiente */}
+                  {pedido.estado !== 'pendiente' && (
+                    <div className="mt-5">
+                      <button
+                        onClick={() => cambiarEstadoPedido(pedido._id, 'pendiente')}
+                        className="w-full rounded-[1rem] border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.08)] px-4 py-2.5 text-sm font-bold uppercase tracking-[0.16em] text-[#d8bb98] transition hover:bg-[rgba(255,248,240,0.14)]"
+                      >
+                        ↺ Restablecer a pendiente
                       </button>
                     </div>
                   )}

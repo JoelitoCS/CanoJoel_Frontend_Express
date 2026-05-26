@@ -35,20 +35,33 @@ export default function Home() {
   }, []);
 
   const obtenerImagenUrl = (imagen) => {
-    if (!imagen) return 'https://via.placeholder.com/300x300?text=Sin+imagen';
+    if (!imagen) return null;
     if (imagen.startsWith('http')) return imagen;
     return `${API_URL.replace('/api', '')}/${imagen}`;
   };
 
-  const ProductoCard = ({ producto, tipo }) => (
-    <article className="panel group overflow-hidden rounded-[1.9rem] transition duration-300 hover:-translate-y-1 hover:shadow-[0_32px_60px_rgba(54,35,24,0.16)]">
-      <div className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,rgba(28,18,14,0.34)_100%)]" />
-        <img
-          src={obtenerImagenUrl(producto.imagen)}
-          alt={producto.nombre}
-          className="h-64 w-full object-cover transition duration-700 group-hover:scale-105"
-        />
+  const ProductoCard = ({ producto, tipo }) => {
+    const [imagenError, setImagenError] = useState(false);
+    const imagenUrl = obtenerImagenUrl(producto.imagen);
+
+    return (
+      <article className="panel group overflow-hidden rounded-[1.9rem] transition duration-300 hover:-translate-y-1 hover:shadow-[0_32px_60px_rgba(54,35,24,0.16)]">
+        <div className="relative overflow-hidden">
+          <div className="absolute inset-0 bg-[linear-gradient(180deg,transparent_45%,rgba(28,18,14,0.34)_100%)]" />
+          {imagenUrl && !imagenError ? (
+            <img
+              src={imagenUrl}
+              alt={producto.nombre}
+              onError={() => setImagenError(true)}
+              // object-contain muestra la botella completa, tanto en cervezas como en vinos, sin recortarla.
+              className="h-64 w-full bg-[rgba(255,248,240,0.72)] object-contain p-5 transition duration-700 group-hover:scale-[1.02]"
+            />
+          ) : (
+            <div className="flex h-64 w-full items-center justify-center bg-[rgba(255,248,240,0.72)] text-[4rem] text-[#7a5945]">
+              {tipo === 'cerveza' ? '🍺' : '🍷'}
+              <span className="sr-only">Sin imagen disponible</span>
+            </div>
+          )}
         <span className="absolute left-5 top-5 rounded-full border border-[rgba(255,244,230,0.45)] bg-[rgba(32,22,18,0.54)] px-3 py-1 text-[0.68rem] font-bold uppercase tracking-[0.25em] text-[#f8e7d1]">
           {tipo}
         </span>
@@ -98,6 +111,7 @@ export default function Home() {
       </div>
     </article>
   );
+  };
 
   if (cargando) {
     return (

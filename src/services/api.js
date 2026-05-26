@@ -35,50 +35,109 @@ const fetchAPI = async (endpoint, options = {}) => {
   return response.json();
 };
 
+// Helper especifico para peticiones con archivos.
+// Aqui NO ponemos Content-Type porque el navegador debe crear el boundary del multipart/form-data.
+const fetchFormDataAPI = async (endpoint, formData, options = {}) => {
+  const token = localStorage.getItem('token');
+  const headers = {
+    ...options.headers,
+  };
+
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const response = await fetch(`${API_URL}${endpoint}`, {
+    ...options,
+    headers,
+    body: formData,
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
+    throw new Error(error.error || `Error ${response.status}`);
+  }
+
+  return response.json();
+};
+
+// Convierte los datos del formulario del admin a FormData cuando hay una imagen.
+// El backend espera el archivo con el nombre de campo "imatge".
+const crearFormDataProducto = (datos) => {
+  const formData = new FormData();
+
+  Object.entries(datos).forEach(([key, value]) => {
+    if (value === undefined || value === null || value === '') return;
+
+    // archivoImagen solo existe en el frontend; en la API se manda como "imatge".
+    if (key === 'archivoImagen') {
+      formData.append('imatge', value);
+      return;
+    }
+
+    // previewImagen es solo una URL temporal del navegador para mostrar la vista previa.
+    if (key === 'previewImagen') return;
+
+    formData.append(key, value);
+  });
+
+  return formData;
+};
+
+// Decide si hay que enviar multipart/form-data o JSON normal.
+const tieneArchivoProducto = (datos) => datos?.archivoImagen instanceof File;
+
+// Quita campos que solo usa React antes de mandar JSON a MongoDB.
+const limpiarDatosProducto = (datos) => {
+  const { archivoImagen, previewImagen, ...datosLimpios } = datos;
+  return datosLimpios;
+};
+
+const guardarProducto = (endpoint, method, datos) => {
+  if (tieneArchivoProducto(datos)) {
+    return fetchFormDataAPI(endpoint, crearFormDataProducto(datos), { method });
+  }
+
+  return fetchAPI(endpoint, {
+    method,
+    body: JSON.stringify(limpiarDatosProducto(datos)),
+  });
+};
+
 // Auth
 export const authAPI = {
-  registro: async (email, password, nombre, foto) => {
-    try {
-      console.log('📤 [authAPI.registro] Enviando registro...');
-      console.log('  📧 Email:', email);
-      console.log('  📝 Nombre:', nombre);
-      console.log('  📸 Foto:', foto ? `${foto.name} (${foto.size} bytes)` : 'Sin foto');
-
+  registro: (email, password, nombre, foto) => {
+    // Si hay foto, usar FormData; si no, usar JSON
+    if (foto) {
       const formData = new FormData();
       formData.append('email', email);
       formData.append('password', password);
       formData.append('nombre', nombre);
-      if (foto) formData.append('foto', foto);
+      formData.append('foto', foto);
 
-      const token = localStorage.getItem('token');
-      const headers = {};
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
-
-      const url = `${API_URL}/api/auth/registro`;
-      console.log('📨 POST:', url);
-
-      const response = await fetch(url, {
+      return fetch(`${API_URL}/auth/registro`, {
         method: 'POST',
         body: formData,
-        headers,
+        // NO incluir Content-Type - el navegador lo establece automáticamente
+      }).then(r => {
+        if (!r.ok) {
+          return r.json().then(err => {
+            throw new Error(err.error || 'Error en el registro');
+          }).catch(e => {
+            throw new Error('Error en el registro');
+          });
+        }
+        return r.json();
+      }).catch(err => {
+        console.error('Error en registro:', err);
+        throw err;
       });
-
-      console.log('📊 Status:', response.status);
-      const data = await response.json();
-      console.log('📦 Response:', data);
-
-      if (!response.ok) {
-        console.error('❌ Error:', data);
-        throw new Error(data.error || `Error ${response.status}`);
-      }
-
-      console.log('✅ Registro exitoso');
-      return data;
-    } catch (err) {
-      console.error('❌ [authAPI.registro]:', err.message);
-      throw err;
+    } else {
+      // Sin foto, usar JSON
+      return fetchAPI('/auth/registro', {
+        method: 'POST',
+        body: JSON.stringify({ email, password, nombre }),
+      });
     }
   },
 
@@ -129,15 +188,9 @@ export const cervezasAPI = {
   obtener: () => fetchAPI('/cervezas'),
   obtenerPorId: (id) => fetchAPI(`/cervezas/${id}`),
   crear: (datos) =>
-    fetchAPI('/cervezas', {
-      method: 'POST',
-      body: JSON.stringify(datos),
-    }),
+    guardarProducto('/cervezas', 'POST', datos),
   actualizar: (id, datos) =>
-    fetchAPI(`/cervezas/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(datos),
-    }),
+    guardarProducto(`/cervezas/${id}`, 'PUT', datos),
   eliminar: (id) =>
     fetchAPI(`/cervezas/${id}`, {
       method: 'DELETE',
@@ -161,15 +214,9 @@ export const vinosAPI = {
   obtener: () => fetchAPI('/vinos'),
   obtenerPorId: (id) => fetchAPI(`/vinos/${id}`),
   crear: (datos) =>
-    fetchAPI('/vinos', {
-      method: 'POST',
-      body: JSON.stringify(datos),
-    }),
+    guardarProducto('/vinos', 'POST', datos),
   actualizar: (id, datos) =>
-    fetchAPI(`/vinos/${id}`, {
-      method: 'PUT',
-      body: JSON.stringify(datos),
-    }),
+    guardarProducto(`/vinos/${id}`, 'PUT', datos),
   eliminar: (id) =>
     fetchAPI(`/vinos/${id}`, {
       method: 'DELETE',
@@ -209,8 +256,8 @@ export const pedidosAPI = {
   obtener: () => fetchAPI('/pedidos'),
   obtenerPorId: (id) => fetchAPI(`/pedidos/${id}`),
   actualizarEstado: (id, estado) =>
-    fetchAPI(`/pedidos/${id}`, {
-      method: 'PUT',
+    fetchAPI(`/pedidos/${id}/estado`, {
+      method: 'PATCH',
       body: JSON.stringify({ estado }),
     }),
 };
