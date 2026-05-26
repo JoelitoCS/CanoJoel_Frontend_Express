@@ -1,263 +1,174 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-console.log('🌐 [API.JS] API_URL:', API_URL);
-
-// Helper para hacer peticiones
+// Helper para peticiones JSON normales
 const fetchAPI = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
   const headers = {
     'Content-Type': 'application/json',
     ...options.headers,
   };
-
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
   const response = await fetch(`${API_URL}/api${endpoint}`, {
     ...options,
     headers,
   });
 
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => '');
-    let errorMessage = `Error ${response.status}`;
-    try {
-      const json = JSON.parse(errorBody);
-      errorMessage = json.error || json.message || errorMessage;
-    } catch {
-      if (errorBody) errorMessage = errorBody;
-      else if (response.statusText) errorMessage = response.statusText;
-    }
-    throw new Error(errorMessage);
-  }
+  if (response.status === 204) return null;
 
-  return response.json();
+  const data = await response.json().catch(() => ({ error: `Error ${response.status}` }));
+  if (!response.ok) throw new Error(data.error || data.message || `Error ${response.status}`);
+  return data;
 };
 
-// Helper especifico para peticiones con archivos.
-// Aqui NO ponemos Content-Type porque el navegador debe crear el boundary del multipart/form-data.
-const fetchFormDataAPI = async (endpoint, formData, options = {}) => {
+// Helper para peticiones con FormData (NO poner Content-Type, el navegador lo gestiona)
+const fetchFormAPI = async (endpoint, formData, method = 'POST') => {
   const token = localStorage.getItem('token');
-  const headers = {
-    ...options.headers,
-  };
+  const headers = {};
+  if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  if (token) {
-    headers['Authorization'] = `Bearer ${token}`;
-  }
-
-  const response = await fetch(`${API_URL}${endpoint}`, {
-    ...options,
+  const response = await fetch(`${API_URL}/api${endpoint}`, {
+    method,
     headers,
     body: formData,
   });
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({ error: 'Error desconocido' }));
-    throw new Error(error.error || `Error ${response.status}`);
-  }
-
-  return response.json();
+  if (response.status === 204) return null;
+  const data = await response.json().catch(() => ({ error: `Error ${response.status}` }));
+  if (!response.ok) throw new Error(data.error || data.message || `Error ${response.status}`);
+  return data;
 };
 
-// Convierte los datos del formulario del admin a FormData cuando hay una imagen.
-// El backend espera el archivo con el nombre de campo "imatge".
-const crearFormDataProducto = (datos) => {
-  const formData = new FormData();
-
-  Object.entries(datos).forEach(([key, value]) => {
-    if (value === undefined || value === null || value === '') return;
-
-    // archivoImagen solo existe en el frontend; en la API se manda como "imatge".
-    if (key === 'archivoImagen') {
-      formData.append('imatge', value);
-      return;
-    }
-
-    // previewImagen es solo una URL temporal del navegador para mostrar la vista previa.
-    if (key === 'previewImagen') return;
-
-    formData.append(key, value);
-  });
-
-  return formData;
+// Construye la URL pública de una imagen guardada en el backend
+// El backend guarda rutas como: "uploads/foto.jpg" o "/uploads/foto.jpg"
+export const getImagenUrl = (ruta) => {
+  if (!ruta) return null;
+  if (ruta.startsWith('http')) return ruta;
+  // Normalizar: quitar barra inicial si la tiene
+  const limpia = ruta.startsWith('/') ? ruta.slice(1) : ruta;
+  return `${API_URL}/${limpia}`;
 };
 
-// Decide si hay que enviar multipart/form-data o JSON normal.
-const tieneArchivoProducto = (datos) => datos?.archivoImagen instanceof File;
-
-// Quita campos que solo usa React antes de mandar JSON a MongoDB.
-const limpiarDatosProducto = (datos) => {
-  const { archivoImagen, previewImagen, ...datosLimpios } = datos;
-  return datosLimpios;
-};
-
-const guardarProducto = (endpoint, method, datos) => {
-  if (tieneArchivoProducto(datos)) {
-    return fetchFormDataAPI(endpoint, crearFormDataProducto(datos), { method });
-  }
-
-  return fetchAPI(endpoint, {
-    method,
-    body: JSON.stringify(limpiarDatosProducto(datos)),
-  });
-};
-
-// Auth
+// ========================
+// AUTH
+// ========================
 export const authAPI = {
+  // Registro con foto opcional (multipart/form-data)
   registro: (email, password, nombre, foto) => {
-    // Si hay foto, usar FormData; si no, usar JSON
-    if (foto) {
-      const formData = new FormData();
-      formData.append('email', email);
-      formData.append('password', password);
-      formData.append('nombre', nombre);
-      formData.append('foto', foto);
-
-      return fetch(`${API_URL}/auth/registro`, {
-        method: 'POST',
-        body: formData,
-        // NO incluir Content-Type - el navegador lo establece automáticamente
-      }).then(r => {
-        if (!r.ok) {
-          return r.json().then(err => {
-            throw new Error(err.error || 'Error en el registro');
-          }).catch(e => {
-            throw new Error('Error en el registro');
-          });
-        }
-        return r.json();
-      }).catch(err => {
-        console.error('Error en registro:', err);
-        throw err;
-      });
-    } else {
-      // Sin foto, usar JSON
-      return fetchAPI('/auth/registro', {
-        method: 'POST',
-        body: JSON.stringify({ email, password, nombre }),
-      });
-    }
+    const fd = new FormData();
+    fd.append('email', email);
+    fd.append('password', password);
+    if (nombre) fd.append('nombre', nombre);
+    if (foto instanceof File) fd.append('foto', foto);
+    return fetchFormAPI('/auth/registro', fd, 'POST');
   },
 
   login: (email, password) =>
-    fetchAPI('/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    }),
+    fetchAPI('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) }),
 
   perfil: () => fetchAPI('/auth/perfil'),
 
-  actualizarPerfil: async (datos) => {
+  // Actualizar perfil con foto opcional
+  actualizarPerfil: (datos) => {
+    // Si hay archivo de foto, mandamos FormData
     if (datos.foto instanceof File) {
-      const formData = new FormData();
-      if (datos.nombre) formData.append('nombre', datos.nombre);
-      if (datos.email) formData.append('email', datos.email);
-      if (datos.password) formData.append('password', datos.password);
-      formData.append('foto', datos.foto);
-
-      const url = `${API_URL}/api/auth/perfil`;
-      const headers = {};
-      const token = localStorage.getItem('token');
-      if (token) headers['Authorization'] = `Bearer ${token}`;
-
-      const response = await fetch(url, {
-        method: 'PUT',
-        body: formData,
-        headers,
-      });
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || data.message || `Error ${response.status}`);
-      }
-
-      return data;
+      const fd = new FormData();
+      if (datos.nombre !== undefined) fd.append('nombre', datos.nombre);
+      if (datos.email)    fd.append('email', datos.email);
+      if (datos.password) fd.append('password', datos.password);
+      fd.append('foto', datos.foto);
+      return fetchFormAPI('/auth/perfil', fd, 'PUT');
     }
-
-    return fetchAPI('/auth/perfil', {
-      method: 'PUT',
-      body: JSON.stringify(datos),
-    });
+    // Sin foto: JSON normal
+    return fetchAPI('/auth/perfil', { method: 'PUT', body: JSON.stringify(datos) });
   },
 };
 
-// Cervezas
+// ========================
+// CERVEZAS
+// ========================
 export const cervezasAPI = {
   obtener: () => fetchAPI('/cervezas'),
   obtenerPorId: (id) => fetchAPI(`/cervezas/${id}`),
-  crear: (datos) =>
-    guardarProducto('/cervezas', 'POST', datos),
-  actualizar: (id, datos) =>
-    guardarProducto(`/cervezas/${id}`, 'PUT', datos),
-  eliminar: (id) =>
-    fetchAPI(`/cervezas/${id}`, {
-      method: 'DELETE',
-    }),
-  subirImagen: (id, archivo) => {
-    const formData = new FormData();
-    formData.append('imatge', archivo);
 
-    return fetch(`${API_URL}/api/cervezas/${id}/imatge`, {
-      method: 'PATCH',
-      body: formData,
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-    }).then(r => r.json());
+  // Crear: acepta imagen opcional con campo "imatge"
+  crear: (datos) => {
+    const fd = new FormData();
+    fd.append('nombre',      datos.nombre      || '');
+    fd.append('descripcion', datos.descripcion || '');
+    fd.append('graduacion',  datos.graduacion  ?? '');
+    fd.append('tipo',        datos.tipo        || '');
+    if (datos.archivoImagen instanceof File) fd.append('imatge', datos.archivoImagen);
+    return fetchFormAPI('/cervezas', fd, 'POST');
   },
+
+  // Actualizar: acepta imagen opcional
+  actualizar: (id, datos) => {
+    const fd = new FormData();
+    fd.append('nombre',      datos.nombre      || '');
+    fd.append('descripcion', datos.descripcion || '');
+    fd.append('graduacion',  datos.graduacion  ?? '');
+    fd.append('tipo',        datos.tipo        || '');
+    if (datos.archivoImagen instanceof File) fd.append('imatge', datos.archivoImagen);
+    return fetchFormAPI(`/cervezas/${id}`, fd, 'PUT');
+  },
+
+  eliminar: (id) => fetchAPI(`/cervezas/${id}`, { method: 'DELETE' }),
 };
 
-// Vinos
+// ========================
+// VINOS
+// ========================
 export const vinosAPI = {
   obtener: () => fetchAPI('/vinos'),
   obtenerPorId: (id) => fetchAPI(`/vinos/${id}`),
-  crear: (datos) =>
-    guardarProducto('/vinos', 'POST', datos),
-  actualizar: (id, datos) =>
-    guardarProducto(`/vinos/${id}`, 'PUT', datos),
-  eliminar: (id) =>
-    fetchAPI(`/vinos/${id}`, {
-      method: 'DELETE',
-    }),
-  subirImagen: (id, archivo) => {
-    const formData = new FormData();
-    formData.append('imatge', archivo);
 
-    return fetch(`${API_URL}/api/vinos/${id}/imatge`, {
-      method: 'PATCH',
-      body: formData,
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`,
-      },
-    }).then(r => r.json());
+  crear: (datos) => {
+    const fd = new FormData();
+    fd.append('nombre',      datos.nombre      || '');
+    fd.append('descripcion', datos.descripcion || '');
+    fd.append('graduacion',  datos.graduacion  ?? '');
+    fd.append('tipo',        datos.tipo        || '');
+    if (datos.archivoImagen instanceof File) fd.append('imatge', datos.archivoImagen);
+    return fetchFormAPI('/vinos', fd, 'POST');
   },
+
+  actualizar: (id, datos) => {
+    const fd = new FormData();
+    fd.append('nombre',      datos.nombre      || '');
+    fd.append('descripcion', datos.descripcion || '');
+    fd.append('graduacion',  datos.graduacion  ?? '');
+    fd.append('tipo',        datos.tipo        || '');
+    if (datos.archivoImagen instanceof File) fd.append('imatge', datos.archivoImagen);
+    return fetchFormAPI(`/vinos/${id}`, fd, 'PUT');
+  },
+
+  eliminar: (id) => fetchAPI(`/vinos/${id}`, { method: 'DELETE' }),
 };
 
-// Usuarios
+// ========================
+// USUARIOS (admin)
+// ========================
 export const usuariosAPI = {
   obtener: () => fetchAPI('/usuaris'),
+
+  // PATCH /api/usuaris/:id/rol  — el backend espera { rol } con valores: 'usuari' | 'editor' | 'admin'
   actualizarRol: (id, rol) =>
-    fetchAPI(`/usuaris/${id}`, {
-      method: 'PUT',
+    fetchAPI(`/usuaris/${id}/rol`, {
+      method: 'PATCH',
       body: JSON.stringify({ rol }),
     }),
+
+  eliminar: (id) => fetchAPI(`/usuaris/${id}`, { method: 'DELETE' }),
 };
 
-// Pedidos
+// ========================
+// PEDIDOS
+// ========================
 export const pedidosAPI = {
   crear: (items, notas = '') =>
-    fetchAPI('/pedidos', {
-      method: 'POST',
-      body: JSON.stringify({ items, notas }),
-    }),
+    fetchAPI('/pedidos', { method: 'POST', body: JSON.stringify({ items, notas }) }),
   misPedidos: () => fetchAPI('/pedidos/me'),
-  obtener: () => fetchAPI('/pedidos'),
+  obtener:    () => fetchAPI('/pedidos'),
   obtenerPorId: (id) => fetchAPI(`/pedidos/${id}`),
-  actualizarEstado: (id, estado) =>
-    fetchAPI(`/pedidos/${id}/estado`, {
-      method: 'PATCH',
-      body: JSON.stringify({ estado }),
-    }),
 };
