@@ -1,37 +1,28 @@
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000';
 
-// Helper para peticiones JSON normales
+// ─── Helpers de fetch ────────────────────────────────────────────────────────
+
+// Peticiones JSON normales
 const fetchAPI = async (endpoint, options = {}) => {
   const token = localStorage.getItem('token');
-  const headers = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
+  const headers = { 'Content-Type': 'application/json', ...options.headers };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const response = await fetch(`${API_URL}/api${endpoint}`, {
-    ...options,
-    headers,
-  });
+  const response = await fetch(`${API_URL}/api${endpoint}`, { ...options, headers });
 
   if (response.status === 204) return null;
-
   const data = await response.json().catch(() => ({ error: `Error ${response.status}` }));
   if (!response.ok) throw new Error(data.error || data.message || `Error ${response.status}`);
   return data;
 };
 
-// Helper para peticiones con FormData (NO poner Content-Type, el navegador lo gestiona)
+// Peticiones con FormData (NO poner Content-Type, el navegador gestiona el boundary)
 const fetchFormAPI = async (endpoint, formData, method = 'POST') => {
   const token = localStorage.getItem('token');
   const headers = {};
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const response = await fetch(`${API_URL}/api${endpoint}`, {
-    method,
-    headers,
-    body: formData,
-  });
+  const response = await fetch(`${API_URL}/api${endpoint}`, { method, headers, body: formData });
 
   if (response.status === 204) return null;
   const data = await response.json().catch(() => ({ error: `Error ${response.status}` }));
@@ -39,21 +30,18 @@ const fetchFormAPI = async (endpoint, formData, method = 'POST') => {
   return data;
 };
 
-// Construye la URL pública de una imagen guardada en el backend
-// El backend guarda rutas como: "uploads/foto.jpg" o "/uploads/foto.jpg"
+// ─── URL pública de imágenes ──────────────────────────────────────────────────
+// El backend guarda "uploads/foto.jpg" o "/uploads/foto.jpg"
+// → devuelve "https://mi-api.com/uploads/foto.jpg"
 export const getImagenUrl = (ruta) => {
   if (!ruta) return null;
   if (ruta.startsWith('http')) return ruta;
-  // Normalizar: quitar barra inicial si la tiene
   const limpia = ruta.startsWith('/') ? ruta.slice(1) : ruta;
   return `${API_URL}/${limpia}`;
 };
 
-// ========================
-// AUTH
-// ========================
+// ─── AUTH ─────────────────────────────────────────────────────────────────────
 export const authAPI = {
-  // Registro con foto opcional (multipart/form-data)
   registro: (email, password, nombre, foto) => {
     const fd = new FormData();
     fd.append('email', email);
@@ -68,30 +56,24 @@ export const authAPI = {
 
   perfil: () => fetchAPI('/auth/perfil'),
 
-  // Actualizar perfil con foto opcional
   actualizarPerfil: (datos) => {
-    // Si hay archivo de foto, mandamos FormData
     if (datos.foto instanceof File) {
       const fd = new FormData();
       if (datos.nombre !== undefined) fd.append('nombre', datos.nombre);
-      if (datos.email)    fd.append('email', datos.email);
+      if (datos.email)    fd.append('email',    datos.email);
       if (datos.password) fd.append('password', datos.password);
       fd.append('foto', datos.foto);
       return fetchFormAPI('/auth/perfil', fd, 'PUT');
     }
-    // Sin foto: JSON normal
     return fetchAPI('/auth/perfil', { method: 'PUT', body: JSON.stringify(datos) });
   },
 };
 
-// ========================
-// CERVEZAS
-// ========================
+// ─── CERVEZAS ─────────────────────────────────────────────────────────────────
 export const cervezasAPI = {
-  obtener: () => fetchAPI('/cervezas'),
-  obtenerPorId: (id) => fetchAPI(`/cervezas/${id}`),
+  obtener:      ()     => fetchAPI('/cervezas'),
+  obtenerPorId: (id)   => fetchAPI(`/cervezas/${id}`),
 
-  // Crear: acepta imagen opcional con campo "imatge"
   crear: (datos) => {
     const fd = new FormData();
     fd.append('nombre',      datos.nombre      || '');
@@ -102,7 +84,6 @@ export const cervezasAPI = {
     return fetchFormAPI('/cervezas', fd, 'POST');
   },
 
-  // Actualizar: acepta imagen opcional
   actualizar: (id, datos) => {
     const fd = new FormData();
     fd.append('nombre',      datos.nombre      || '');
@@ -116,12 +97,10 @@ export const cervezasAPI = {
   eliminar: (id) => fetchAPI(`/cervezas/${id}`, { method: 'DELETE' }),
 };
 
-// ========================
-// VINOS
-// ========================
+// ─── VINOS ────────────────────────────────────────────────────────────────────
 export const vinosAPI = {
-  obtener: () => fetchAPI('/vinos'),
-  obtenerPorId: (id) => fetchAPI(`/vinos/${id}`),
+  obtener:      ()     => fetchAPI('/vinos'),
+  obtenerPorId: (id)   => fetchAPI(`/vinos/${id}`),
 
   crear: (datos) => {
     const fd = new FormData();
@@ -146,13 +125,11 @@ export const vinosAPI = {
   eliminar: (id) => fetchAPI(`/vinos/${id}`, { method: 'DELETE' }),
 };
 
-// ========================
-// USUARIOS (admin)
-// ========================
+// ─── USUARIOS (admin) ─────────────────────────────────────────────────────────
 export const usuariosAPI = {
   obtener: () => fetchAPI('/usuaris'),
 
-  // PATCH /api/usuaris/:id/rol  — el backend espera { rol } con valores: 'usuari' | 'editor' | 'admin'
+  // PATCH /api/usuaris/:id/rol — valores válidos: 'usuari' | 'editor' | 'admin'
   actualizarRol: (id, rol) =>
     fetchAPI(`/usuaris/${id}/rol`, {
       method: 'PATCH',
@@ -162,13 +139,21 @@ export const usuariosAPI = {
   eliminar: (id) => fetchAPI(`/usuaris/${id}`, { method: 'DELETE' }),
 };
 
-// ========================
-// PEDIDOS
-// ========================
+// ─── PEDIDOS ──────────────────────────────────────────────────────────────────
 export const pedidosAPI = {
   crear: (items, notas = '') =>
     fetchAPI('/pedidos', { method: 'POST', body: JSON.stringify({ items, notas }) }),
+
   misPedidos: () => fetchAPI('/pedidos/me'),
-  obtener:    () => fetchAPI('/pedidos'),
+
+  // Solo admin
+  obtener:      ()   => fetchAPI('/pedidos'),
   obtenerPorId: (id) => fetchAPI(`/pedidos/${id}`),
+
+  // PATCH /api/pedidos/:id/estado — valores válidos: 'pendiente' | 'confirmado' | 'cancelado'
+  actualizarEstado: (id, estado) =>
+    fetchAPI(`/pedidos/${id}/estado`, {
+      method: 'PATCH',
+      body: JSON.stringify({ estado }),
+    }),
 };

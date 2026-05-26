@@ -9,52 +9,53 @@ const productoInicial = {
 };
 
 const productoAFormulario = (p) => ({
-  nombre: p.nombre || '',
+  nombre:      p.nombre      || '',
   descripcion: p.descripcion || '',
-  graduacion: p.graduacion ?? '',
-  tipo: p.tipo || '',
-  imagen: p.imagen || '',
+  graduacion:  p.graduacion  ?? '',
+  tipo:        p.tipo        || '',
+  imagen:      p.imagen      || '',
   archivoImagen: null,
   previewImagen: '',
 });
 
-// Los roles que acepta el backend (exactamente estos valores)
 const ROLES = ['usuari', 'editor', 'admin'];
 
 export default function Admin() {
   const { usuario, autenticado, esAdmin } = useAuth();
   const navigate = useNavigate();
+
   const [seccion, setSeccion] = useState('cervezas');
   const [cargando, setCargando] = useState(false);
-  const [error, setError]   = useState('');
-  const [exito, setExito]   = useState('');
+  const [error, setError]       = useState('');
+  const [exito, setExito]       = useState('');
 
-  // — Cervezas —
-  const [cervezas, setCervezas]             = useState([]);
-  const [formCerveza, setFormCerveza]       = useState({ ...productoInicial });
+  // Cervezas
+  const [cervezas, setCervezas]               = useState([]);
+  const [formCerveza, setFormCerveza]         = useState({ ...productoInicial });
   const [editandoCerveza, setEditandoCerveza] = useState(null);
   const formCervezaRef = useRef(null);
 
-  // — Vinos —
+  // Vinos
   const [vinos, setVinos]               = useState([]);
   const [formVino, setFormVino]         = useState({ ...productoInicial });
   const [editandoVino, setEditandoVino] = useState(null);
   const formVinoRef = useRef(null);
 
-  // — Pedidos —
-  const [pedidos, setPedidos] = useState([]);
+  // Pedidos
+  const [pedidos, setPedidos]             = useState([]);
+  const [cambiandoEstado, setCambiandoEstado] = useState(null); // id del pedido procesándose
 
-  // — Usuarios: guardamos una copia local con el rol pendiente de guardar —
-  const [usuarios, setUsuarios]               = useState([]);
-  const [rolesLocales, setRolesLocales]       = useState({});   // { [id]: rolSeleccionado }
-  const [guardandoRol, setGuardandoRol]       = useState(null); // id del usuario guardándose
+  // Usuarios
+  const [usuarios, setUsuarios]         = useState([]);
+  const [rolesLocales, setRolesLocales] = useState({});
+  const [guardandoRol, setGuardandoRol] = useState(null);
 
-  // — Redirect si no es admin —
+  // ── Redirect ──────────────────────────────────────────────
   useEffect(() => {
     if (!autenticado || !esAdmin) navigate('/');
   }, [autenticado, esAdmin, navigate]);
 
-  // — Cargar datos al cambiar sección —
+  // ── Cargar al cambiar sección ──────────────────────────────
   useEffect(() => {
     if (!autenticado || !esAdmin) return;
     cargarDatos();
@@ -62,23 +63,18 @@ export default function Admin() {
   }, [seccion]);
 
   const cargarDatos = async () => {
-    setCargando(true);
-    setError('');
+    setCargando(true); setError('');
     try {
       if (seccion === 'cervezas') {
-        const d = await cervezasAPI.obtener();
-        setCervezas(d?.dades || []);
+        const d = await cervezasAPI.obtener(); setCervezas(d?.dades || []);
       } else if (seccion === 'vinos') {
-        const d = await vinosAPI.obtener();
-        setVinos(d?.dades || []);
+        const d = await vinosAPI.obtener(); setVinos(d?.dades || []);
       } else if (seccion === 'pedidos') {
-        const d = await pedidosAPI.obtener();
-        setPedidos(d?.dades || []);
+        const d = await pedidosAPI.obtener(); setPedidos(d?.dades || []);
       } else if (seccion === 'usuarios') {
         const d = await usuariosAPI.obtener();
         const lista = d?.dades || [];
         setUsuarios(lista);
-        // Inicializar roles locales con el valor actual de cada usuario
         const mapa = {};
         lista.forEach(u => { mapa[u._id] = u.rol; });
         setRolesLocales(mapa);
@@ -90,16 +86,13 @@ export default function Admin() {
     }
   };
 
-  const mostrarExito = (msg) => {
-    setExito(msg);
-    setTimeout(() => setExito(''), 3000);
-  };
+  const mostrarExito = (msg) => { setExito(msg); setTimeout(() => setExito(''), 3500); };
 
   // ── CERVEZAS ──────────────────────────────────────────────
   const guardarCerveza = async (e) => {
     e.preventDefault();
     if (!formCerveza.nombre || !formCerveza.descripcion || !formCerveza.graduacion || !formCerveza.tipo) {
-      setError('Completa todos los campos'); return;
+      setError('Completa todos los campos obligatorios'); return;
     }
     setCargando(true); setError('');
     try {
@@ -110,9 +103,7 @@ export default function Admin() {
         await cervezasAPI.crear(formCerveza);
         mostrarExito('Cerveza creada ✓');
       }
-      setFormCerveza({ ...productoInicial });
-      setEditandoCerveza(null);
-      cargarDatos();
+      setFormCerveza({ ...productoInicial }); setEditandoCerveza(null); cargarDatos();
     } catch (err) { setError(err.message); }
     finally { setCargando(false); }
   };
@@ -127,7 +118,7 @@ export default function Admin() {
   const guardarVino = async (e) => {
     e.preventDefault();
     if (!formVino.nombre || !formVino.descripcion || !formVino.graduacion || !formVino.tipo) {
-      setError('Completa todos los campos'); return;
+      setError('Completa todos los campos obligatorios'); return;
     }
     setCargando(true); setError('');
     try {
@@ -138,9 +129,7 @@ export default function Admin() {
         await vinosAPI.crear(formVino);
         mostrarExito('Vino creado ✓');
       }
-      setFormVino({ ...productoInicial });
-      setEditandoVino(null);
-      cargarDatos();
+      setFormVino({ ...productoInicial }); setEditandoVino(null); cargarDatos();
     } catch (err) { setError(err.message); }
     finally { setCargando(false); }
   };
@@ -151,30 +140,39 @@ export default function Admin() {
     catch (err) { setError(err.message); }
   };
 
-  // ── USUARIOS / ROLES ──────────────────────────────────────
-  const guardarRol = async (usuarioItem) => {
-    if (usuarioItem._id === usuario._id) {
-      setError('No puedes cambiar tu propio rol.'); return;
-    }
-    const rolNuevo = rolesLocales[usuarioItem._id];
-    if (!rolNuevo) return;
-
-    setGuardandoRol(usuarioItem._id);
-    setError('');
+  // ── PEDIDOS / ESTADO ──────────────────────────────────────
+  const cambiarEstado = async (id, nuevoEstado) => {
+    setCambiandoEstado(id); setError('');
     try {
-      // PATCH /api/usuaris/:id/rol  con body { rol: 'usuari' | 'editor' | 'admin' }
-      await usuariosAPI.actualizarRol(usuarioItem._id, rolNuevo);
-      // Actualizar lista local para reflejar el cambio visualmente sin recargar
-      setUsuarios(prev => prev.map(u => u._id === usuarioItem._id ? { ...u, rol: rolNuevo } : u));
-      mostrarExito(`Rol de ${usuarioItem.nombre || usuarioItem.email} actualizado a "${rolNuevo}" ✓`);
+      await pedidosAPI.actualizarEstado(id, nuevoEstado);
+      // Actualizar localmente sin recargar todo
+      setPedidos(prev =>
+        prev.map(p => p._id === id ? { ...p, estado: nuevoEstado } : p)
+      );
+      const labels = { confirmado: 'confirmado ✓', cancelado: 'cancelado ✗', pendiente: 'restablecido a pendiente' };
+      mostrarExito(`Pedido ${labels[nuevoEstado] || nuevoEstado}`);
     } catch (err) {
-      setError(err.message || 'Error al actualizar rol');
+      setError(err.message || 'Error al cambiar estado del pedido');
     } finally {
-      setGuardandoRol(null);
+      setCambiandoEstado(null);
     }
   };
 
-  // ── FORMULARIO DE PRODUCTO (reutilizable) ─────────────────
+  // ── USUARIOS / ROLES ──────────────────────────────────────
+  const guardarRol = async (u) => {
+    if (u._id === usuario._id) { setError('No puedes cambiar tu propio rol.'); return; }
+    const rolNuevo = rolesLocales[u._id];
+    if (!rolNuevo) return;
+    setGuardandoRol(u._id); setError('');
+    try {
+      await usuariosAPI.actualizarRol(u._id, rolNuevo);
+      setUsuarios(prev => prev.map(x => x._id === u._id ? { ...x, rol: rolNuevo } : x));
+      mostrarExito(`Rol de ${u.nombre || u.email} actualizado a "${rolNuevo}" ✓`);
+    } catch (err) { setError(err.message || 'Error al actualizar rol'); }
+    finally { setGuardandoRol(null); }
+  };
+
+  // ── FORMULARIO PRODUCTO ────────────────────────────────────
   const renderFormulario = (titulo, form, setForm, onSubmit, editando, onCancel, tipoPlaceholder, formRef) => (
     <div className="panel-dark rounded-[2rem] p-6 text-[#fff4e6] lg:sticky lg:top-28">
       <h2 className="font-display text-4xl">{titulo}</h2>
@@ -189,7 +187,7 @@ export default function Admin() {
               value={form[key]}
               onChange={e => setForm({ ...form, [key]: e.target.value })}
               placeholder={key === 'tipo' ? tipoPlaceholder : ''}
-              className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.18)] bg-[rgba(255,248,240,0.07)] px-4 py-3 text-[#fff4e6] outline-none transition focus:border-[#d8bb98] placeholder:text-[rgba(216,187,152,0.4)]"
+              className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.18)] bg-[rgba(255,248,240,0.07)] px-4 py-3 text-[#fff4e6] outline-none transition focus:border-[#d8bb98] placeholder:text-[rgba(216,187,152,0.35)]"
             />
           </div>
         ))}
@@ -206,8 +204,6 @@ export default function Admin() {
 
         <div>
           <label className="mb-2 block text-xs font-extrabold uppercase tracking-[0.18em] text-[#d8bb98]">Imagen del producto</label>
-
-          {/* Preview: muestra la nueva imagen elegida o la ya guardada */}
           {(form.previewImagen || form.imagen) && (
             <div className="mb-3 overflow-hidden rounded-[1.1rem] border border-[rgba(231,205,176,0.14)]">
               <img
@@ -217,61 +213,47 @@ export default function Admin() {
               />
             </div>
           )}
-
           <input
             type="file"
-            accept="image/jpeg,image/png,image/gif,image/webp"
+            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
             onChange={e => {
               const archivo = e.target.files?.[0] || null;
-              const previewImagen = archivo ? URL.createObjectURL(archivo) : '';
-              setForm({ ...form, archivoImagen: archivo, previewImagen });
+              setForm({ ...form, archivoImagen: archivo, previewImagen: archivo ? URL.createObjectURL(archivo) : '' });
             }}
-            className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.18)] bg-[rgba(255,248,240,0.07)] px-4 py-3 text-sm text-[#d8bb98] outline-none file:mr-4 file:rounded-full file:border-0 file:bg-[#d8bb98] file:px-4 file:py-2 file:text-sm file:font-bold file:text-[#2d201a] focus:border-[#d8bb98]"
+            className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.18)] bg-[rgba(255,248,240,0.07)] px-4 py-3 text-sm text-[#d8bb98] outline-none file:mr-4 file:rounded-full file:border-0 file:bg-[#d8bb98] file:px-4 file:py-2 file:text-sm file:font-bold file:text-[#2d201a]"
           />
           {form.archivoImagen && (
-            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-[#d8bb98]">
-              📷 {form.archivoImagen.name}
-            </p>
+            <p className="mt-2 text-xs font-bold uppercase tracking-widest text-[#d8bb98]">📷 {form.archivoImagen.name}</p>
           )}
         </div>
 
-        <button
-          type="submit"
-          disabled={cargando}
-          className="wood-button w-full rounded-[1.1rem] px-4 py-3 text-sm font-bold uppercase tracking-[0.16em] disabled:opacity-50"
-        >
+        <button type="submit" disabled={cargando}
+          className="wood-button w-full rounded-[1.1rem] px-4 py-3 text-sm font-bold uppercase tracking-[0.16em] disabled:opacity-50">
           {cargando ? 'Guardando...' : editando ? 'Actualizar' : 'Crear'}
         </button>
-
         {editando && (
-          <button
-            type="button"
-            onClick={onCancel}
-            className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.18)] bg-[rgba(255,248,240,0.06)] px-4 py-3 text-sm font-bold uppercase tracking-[0.16em] text-[#d8bb98]"
-          >
-            Cancelar
+          <button type="button" onClick={onCancel}
+            className="w-full rounded-[1.1rem] border border-[rgba(231,205,176,0.18)] bg-[rgba(255,248,240,0.06)] px-4 py-3 text-sm font-bold uppercase tracking-[0.16em] text-[#d8bb98]">
+            Cancelar edición
           </button>
         )}
       </form>
     </div>
   );
 
-  // ── LISTA DE PRODUCTOS ────────────────────────────────────
+  // ── LISTA PRODUCTOS ────────────────────────────────────────
   const renderLista = (items, onEdit, onDelete) => (
     <div className="grid gap-4 md:grid-cols-2">
       {cargando ? (
-        <p className="text-[#d8bb98] italic">Cargando...</p>
+        <p className="text-[#d8bb98] italic col-span-2">Cargando...</p>
       ) : items.length === 0 ? (
         <div className="panel rounded-[1.8rem] p-8 text-[#6d5040] col-span-2">No hay elementos todavía.</div>
       ) : items.map(item => (
         <article key={item._id} className="panel rounded-[1.8rem] p-5">
           <div className="flex gap-4">
             {item.imagen ? (
-              <img
-                src={getImagenUrl(item.imagen)}
-                alt={item.nombre}
-                className="h-24 w-24 shrink-0 rounded-[1.1rem] object-cover"
-              />
+              <img src={getImagenUrl(item.imagen)} alt={item.nombre}
+                className="h-24 w-24 shrink-0 rounded-[1.1rem] object-cover" />
             ) : (
               <div className="flex h-24 w-24 shrink-0 items-center justify-center rounded-[1.1rem] border border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.07)] text-[0.6rem] font-bold uppercase tracking-widest text-[#8c684d]">
                 Sin foto
@@ -281,23 +263,17 @@ export default function Admin() {
               <h3 className="font-display text-2xl text-[#2d201a]">{item.nombre}</h3>
               <p className="mt-1 line-clamp-2 text-sm text-[#5c4335]">{item.descripcion}</p>
               <div className="mt-2 flex gap-3 text-xs text-[#7a5945]">
-                <span>{item.graduacion}°</span>
-                <span>·</span>
-                <span>{item.tipo}</span>
+                <span>{item.graduacion}°</span><span>·</span><span>{item.tipo}</span>
               </div>
             </div>
           </div>
           <div className="mt-4 flex gap-3">
-            <button
-              onClick={() => onEdit(item)}
-              className="wood-button-soft flex-1 rounded-[1rem] px-3 py-2.5 text-sm font-bold uppercase tracking-widest"
-            >
+            <button onClick={() => { onEdit(item); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+              className="wood-button-soft flex-1 rounded-[1rem] px-3 py-2.5 text-sm font-bold uppercase tracking-widest">
               Editar
             </button>
-            <button
-              onClick={() => onDelete(item._id)}
-              className="flex-1 rounded-[1rem] border border-[#d9b7b7] bg-[#fff6f6] px-3 py-2.5 text-sm font-bold uppercase tracking-widest text-[#8d4a4a] transition hover:bg-[#ffe8e8]"
-            >
+            <button onClick={() => onDelete(item._id)}
+              className="flex-1 rounded-[1rem] border border-[#d9b7b7] bg-[#fff6f6] px-3 py-2.5 text-sm font-bold uppercase tracking-widest text-[#8d4a4a] transition hover:bg-[#ffe8e8]">
               Eliminar
             </button>
           </div>
@@ -306,6 +282,7 @@ export default function Admin() {
     </div>
   );
 
+  // ── RENDER PRINCIPAL ───────────────────────────────────────
   return (
     <div className="page-shell bg-[linear-gradient(170deg,rgba(34,24,20,0.97),rgba(20,14,11,0.99))]">
       <div className="mx-auto max-w-7xl">
@@ -328,21 +305,18 @@ export default function Admin() {
         {/* Tabs */}
         <div className="mb-8 flex flex-wrap gap-3">
           {['cervezas', 'vinos', 'pedidos', 'usuarios'].map(key => (
-            <button
-              key={key}
-              onClick={() => setSeccion(key)}
+            <button key={key} onClick={() => setSeccion(key)}
               className={`rounded-full px-5 py-2.5 text-sm font-bold uppercase tracking-[0.16em] transition ${
                 seccion === key
                   ? 'wood-button'
                   : 'border border-[rgba(231,205,176,0.16)] bg-[rgba(255,248,240,0.05)] text-[#f1decd] hover:bg-[rgba(255,248,240,0.1)]'
-              }`}
-            >
+              }`}>
               {key.charAt(0).toUpperCase() + key.slice(1)}
             </button>
           ))}
         </div>
 
-        {/* ── Sección Cervezas ── */}
+        {/* ── Cervezas ── */}
         {seccion === 'cervezas' && (
           <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
             {renderFormulario(
@@ -353,13 +327,13 @@ export default function Admin() {
             )}
             {renderLista(
               cervezas,
-              (c) => { setEditandoCerveza(c); setFormCerveza(productoAFormulario(c)); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+              c => { setEditandoCerveza(c); setFormCerveza(productoAFormulario(c)); window.scrollTo({ top: 0, behavior: 'smooth' }); },
               eliminarCerveza
             )}
           </div>
         )}
 
-        {/* ── Sección Vinos ── */}
+        {/* ── Vinos ── */}
         {seccion === 'vinos' && (
           <div className="grid gap-8 lg:grid-cols-[400px_1fr]">
             {renderFormulario(
@@ -370,56 +344,111 @@ export default function Admin() {
             )}
             {renderLista(
               vinos,
-              (v) => { setEditandoVino(v); setFormVino(productoAFormulario(v)); window.scrollTo({ top: 0, behavior: 'smooth' }); },
+              v => { setEditandoVino(v); setFormVino(productoAFormulario(v)); window.scrollTo({ top: 0, behavior: 'smooth' }); },
               eliminarVino
             )}
           </div>
         )}
 
-        {/* ── Sección Pedidos ── */}
+        {/* ── Pedidos ── */}
         {seccion === 'pedidos' && (
           <div className="space-y-4">
             {cargando ? (
               <p className="text-[#d8bb98] italic">Cargando pedidos...</p>
             ) : pedidos.length === 0 ? (
-              <div className="panel rounded-[1.8rem] p-8 text-[#6d5040]">No hay pedidos.</div>
+              <div className="panel rounded-[1.8rem] p-8 text-[#6d5040]">No hay pedidos todavía.</div>
             ) : pedidos.map(pedido => (
               <article key={pedido._id} className="panel rounded-[1.8rem] p-6">
+
+                {/* Cabecera del pedido */}
                 <div className="flex flex-wrap items-start justify-between gap-4">
                   <div>
                     <h3 className="font-display text-2xl text-[#2d201a]">
                       Pedido <span className="text-[#7a5945]">#{pedido._id.slice(-8).toUpperCase()}</span>
                     </h3>
-                    <p className="mt-1 text-sm text-[#6d5040]">{new Date(pedido.createdAt).toLocaleString('es-ES')}</p>
+                    <p className="mt-1 text-sm text-[#6d5040]">
+                      {new Date(pedido.createdAt).toLocaleString('es-ES')}
+                    </p>
                     {pedido.usuario && (
-                      <p className="mt-1 text-xs font-bold uppercase tracking-widest text-[#8c684d]">
+                      <p className="mt-0.5 text-xs font-bold uppercase tracking-widest text-[#8c684d]">
                         {pedido.usuario.nombre || pedido.usuario.email}
                       </p>
                     )}
                   </div>
+                  {/* Badge de estado */}
                   <span className={`rounded-full border px-4 py-1.5 text-xs font-extrabold uppercase tracking-widest ${
-                    pedido.estado === 'confirmado' ? 'border-[#4d704a] bg-[#243827] text-[#7ecf7a]'
-                    : pedido.estado === 'cancelado' ? 'border-[#7b3f3f] bg-[#4a2224] text-[#ffa0a0]'
-                    : 'border-[rgba(121,88,66,0.14)] bg-[rgba(121,88,66,0.08)] text-[#7a5945]'
-                  }`}>{pedido.estado}</span>
+                    pedido.estado === 'confirmado'
+                      ? 'border-[#4d704a] bg-[#243827] text-[#7ecf7a]'
+                      : pedido.estado === 'cancelado'
+                      ? 'border-[#7b3f3f] bg-[#4a2224] text-[#ffa0a0]'
+                      : 'border-[rgba(121,88,66,0.2)] bg-[rgba(121,88,66,0.1)] text-[#c9a84c]'
+                  }`}>
+                    {pedido.estado === 'pendiente' ? '⏳ Pendiente'
+                      : pedido.estado === 'confirmado' ? '✓ Confirmado'
+                      : '✗ Cancelado'}
+                  </span>
                 </div>
+
+                {/* Productos */}
                 <div className="mt-4 rounded-[1.4rem] border border-[rgba(121,88,66,0.12)] bg-white/40 p-4">
                   <p className="mb-2 text-xs font-bold uppercase tracking-widest text-[#7a5945]">Productos</p>
                   {pedido.items.map((item, i) => (
-                    <p key={i} className="text-sm text-[#5c4335]">• {item.nombre} × {item.cantidad} <span className="text-xs text-[#8c684d]">({item.tipo})</span></p>
+                    <p key={i} className="text-sm text-[#5c4335]">
+                      • {item.nombre} <span className="font-bold">×{item.cantidad}</span>{' '}
+                      <span className="text-xs text-[#8c684d]">({item.tipo})</span>
+                    </p>
                   ))}
                 </div>
+
+                {/* Notas */}
                 {pedido.notas && (
                   <p className="mt-3 rounded-[1.2rem] border border-[rgba(121,88,66,0.1)] bg-[rgba(121,88,66,0.05)] p-3 text-sm text-[#6d5040]">
                     <strong>Notas:</strong> {pedido.notas}
                   </p>
                 )}
+
+                {/* ── Botones de acción de estado ── */}
+                <div className="mt-5 flex flex-wrap gap-3">
+                  {/* Confirmar — solo si NO está ya confirmado */}
+                  {pedido.estado !== 'confirmado' && (
+                    <button
+                      onClick={() => cambiarEstado(pedido._id, 'confirmado')}
+                      disabled={cambiandoEstado === pedido._id}
+                      className="flex-1 min-w-[120px] rounded-[1rem] border border-[#4d704a] bg-[#243827] px-4 py-2.5 text-sm font-bold uppercase tracking-widest text-[#7ecf7a] transition hover:bg-[#2e4a30] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {cambiandoEstado === pedido._id ? '...' : '✓ Confirmar'}
+                    </button>
+                  )}
+
+                  {/* Cancelar — solo si NO está ya cancelado */}
+                  {pedido.estado !== 'cancelado' && (
+                    <button
+                      onClick={() => cambiarEstado(pedido._id, 'cancelado')}
+                      disabled={cambiandoEstado === pedido._id}
+                      className="flex-1 min-w-[120px] rounded-[1rem] border border-[#7b3f3f] bg-[#4a2224] px-4 py-2.5 text-sm font-bold uppercase tracking-widest text-[#ffa0a0] transition hover:bg-[#5a2a2c] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {cambiandoEstado === pedido._id ? '...' : '✗ Cancelar'}
+                    </button>
+                  )}
+
+                  {/* Restablecer a pendiente — solo si ya tiene estado final */}
+                  {pedido.estado !== 'pendiente' && (
+                    <button
+                      onClick={() => cambiarEstado(pedido._id, 'pendiente')}
+                      disabled={cambiandoEstado === pedido._id}
+                      className="flex-1 min-w-[140px] rounded-[1rem] border border-[rgba(231,205,176,0.2)] bg-[rgba(255,248,240,0.06)] px-4 py-2.5 text-sm font-bold uppercase tracking-widest text-[#d8bb98] transition hover:bg-[rgba(255,248,240,0.12)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {cambiandoEstado === pedido._id ? '...' : '↺ Pendiente'}
+                    </button>
+                  )}
+                </div>
+
               </article>
             ))}
           </div>
         )}
 
-        {/* ── Sección Usuarios ── */}
+        {/* ── Usuarios ── */}
         {seccion === 'usuarios' && (
           <div className="space-y-4">
             {cargando ? (
@@ -431,7 +460,8 @@ export default function Admin() {
                 <div className="flex flex-wrap items-center justify-between gap-4">
                   <div className="flex items-center gap-4">
                     {u.foto ? (
-                      <img src={getImagenUrl(u.foto)} alt={u.nombre} className="h-12 w-12 rounded-full object-cover border-2 border-[rgba(121,88,66,0.2)]" />
+                      <img src={getImagenUrl(u.foto)} alt={u.nombre}
+                        className="h-12 w-12 rounded-full object-cover border-2 border-[rgba(121,88,66,0.2)]" />
                     ) : (
                       <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[rgba(121,88,66,0.12)] font-display text-xl text-[#7a5945]">
                         {(u.nombre || u.email || '?')[0].toUpperCase()}
@@ -442,7 +472,6 @@ export default function Admin() {
                       <p className="text-sm text-[#6d5040]">{u.email}</p>
                     </div>
                   </div>
-                  {/* Badge con el rol ACTUAL guardado en BD */}
                   <span className={`rounded-full border px-3 py-1 text-xs font-extrabold uppercase tracking-widest ${
                     u.rol === 'admin'  ? 'border-[#7b3f3f] bg-[#fff2f2] text-[#8d4a4a]'
                     : u.rol === 'editor' ? 'border-[#4d704a] bg-[#f0fdf0] text-[#446243]'
@@ -450,13 +479,12 @@ export default function Admin() {
                   }`}>{u.rol}</span>
                 </div>
 
-                {/* Control de cambio de rol */}
                 {u._id !== usuario._id ? (
                   <div className="mt-5 flex flex-wrap items-center gap-3">
                     <select
                       value={rolesLocales[u._id] || u.rol}
                       onChange={e => setRolesLocales(prev => ({ ...prev, [u._id]: e.target.value }))}
-                      className="flex-1 min-w-[160px] rounded-[1.1rem] border border-[#b78c66] bg-[#fff4e0] px-4 py-3 text-[#2d201a] outline-none transition focus:border-[#a77953] focus:ring-2 focus:ring-[#d8bb98]/30"
+                      className="flex-1 min-w-[160px] rounded-[1.1rem] border border-[#b78c66] bg-[#fff4e0] px-4 py-3 text-[#2d201a] outline-none transition focus:border-[#a77953]"
                     >
                       {ROLES.map(r => (
                         <option key={r} value={r}>
@@ -473,7 +501,7 @@ export default function Admin() {
                     </button>
                   </div>
                 ) : (
-                  <p className="mt-4 text-xs text-[#8c684d] italic">Este es tu propio usuario — no puedes cambiar tu rol.</p>
+                  <p className="mt-3 text-xs text-[#8c684d] italic">Este es tu usuario — no puedes cambiar tu propio rol.</p>
                 )}
               </article>
             ))}
