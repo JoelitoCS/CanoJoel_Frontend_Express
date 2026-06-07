@@ -157,23 +157,6 @@ export default function Home() {
                 </button>
               </div>
             </div>
-
-            <div className="animate-fade-up delay-200">
-              <div className="panel rounded-[2rem] bg-[linear-gradient(180deg,rgba(255,252,247,0.9),rgba(241,228,210,0.74))] p-6 text-[#2d201a]">
-                <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
-                  <div className="rounded-[1.6rem] bg-[rgba(68,49,40,0.06)] p-5">
-                    <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-[#8c684d]">Ambiente</p>
-                    <p className="mt-2 font-display text-3xl leading-none">Nogal, latón y papel fino</p>
-                  </div>
-                  <div className="rounded-[1.6rem] border border-[rgba(121,88,66,0.12)] bg-[rgba(255,255,255,0.46)] p-5">
-                    <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-[#8c684d]">Dirección visual</p>
-                    <p className="mt-2 text-sm text-[#5c4335]">
-                      Detalle clásico, contraste elegante y superficies con profundidad sin perder limpieza comercial.
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
           </div>
         </section>
 
